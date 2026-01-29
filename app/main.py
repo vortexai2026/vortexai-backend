@@ -1,3 +1,5 @@
+import stripe
+from fastapi import HTTPException
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
@@ -437,3 +439,4 @@ def list_matches_for_deal(deal_id: str):
         return {"count": len(rows), "matches": rows}
     finally:
         conn.close()
+

@@ -5,7 +5,10 @@ from pdf_routes import router as pdf_router
 from stripe_routes import router as stripe_router
 from stripe_webhook import router as stripe_webhook_router
 
-app = FastAPI(title="VortexAI Backend", version="1.0.0")
+app = FastAPI(
+    title="VortexAI Backend",
+    version="1.0.0"
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -16,7 +19,11 @@ app.add_middleware(
 
 @app.get("/")
 def root():
-    return {"status": "ok", "service": "VortexAI"}
+    return {
+        "status": "ok",
+        "service": "VortexAI",
+        "message": "Backend running"
+    }
 
 @app.get("/health")
 def health():

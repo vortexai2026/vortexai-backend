@@ -39,11 +39,11 @@ def health():
     return {"status": "healthy"}
 
 # =========================================
-# IMPORT ROUTERS (CORRECT PATHS)
+# IMPORT ROUTERS (FIXED)
 # =========================================
-from app.api.pdf_routes import router as pdf_router
-from app.api.stripe_routes import router as stripe_router
-from app.api.stripe_webhook import router as stripe_webhook_router
+from app.pdf_routes import router as pdf_router
+from app.stripe_routes import router as stripe_router
+from app.stripe_webhook import router as stripe_webhook_router
 
 # =========================================
 # REGISTER ROUTERS

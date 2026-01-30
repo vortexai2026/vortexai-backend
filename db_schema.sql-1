@@ -1,0 +1,69 @@
+-- =========================
+-- VortexAI Database Schema
+-- =========================
+
+-- BUYERS
+CREATE TABLE IF NOT EXISTS buyers (
+    id uuid PRIMARY KEY,
+    name text,
+    email text,
+    budget numeric,
+    location text,
+    asset_type text,
+    plan text,
+    stripe_customer_id text,
+    tier text
+);
+
+-- DEALS
+CREATE TABLE IF NOT EXISTS deals (
+    id uuid PRIMARY KEY,
+    title text,
+    price text,
+    location text,
+    source text,
+    profit_estimate numeric,
+    ai_score numeric,
+    created_at timestamp,
+    category text,
+    estimated_fee numeric,
+    fee_type text,
+    fee_percent numeric,
+    actual_fee numeric,
+    fee_paid boolean,
+    asset_type text,
+    status text,
+    success_fee numeric,
+    paid boolean,
+    matched_buyer_id integer
+);
+
+-- DEAL MATCHES
+CREATE TABLE IF NOT EXISTS deal_matches (
+    id uuid PRIMARY KEY,
+    deal_id uuid,
+    buyer_id uuid,
+    match_score integer,
+    status text,
+    created_at timestamptz
+);
+
+-- DEALERS
+CREATE TABLE IF NOT EXISTS dealers (
+    id uuid PRIMARY KEY,
+    company text,
+    contact_name text,
+    phone text,
+    email text,
+    deal_types text,
+    created_at timestamptz
+);
+
+-- SELLERS
+CREATE TABLE IF NOT EXISTS sellers (
+    id uuid PRIMARY KEY,
+    name text,
+    phone text,
+    asset_type text,
+    location text
+);

@@ -8,8 +8,6 @@ from dotenv import load_dotenv
 # =========================================
 load_dotenv()
 
-APP_URL = os.getenv("APP_URL", "http://localhost:8080")
-
 # =========================================
 # FASTAPI APP
 # =========================================
@@ -26,7 +24,7 @@ app.add_middleware(
 )
 
 # =========================================
-# BASIC HEALTH CHECK
+# BASIC ROUTES
 # =========================================
 @app.get("/")
 def root():
@@ -41,12 +39,11 @@ def health():
     return {"status": "healthy"}
 
 # =========================================
-# IMPORT ROUTERS
-# (order matters – keep this order)
+# IMPORT ROUTERS (CORRECT PATHS)
 # =========================================
-from app.pdf_routes import router as pdf_router
-from app.stripe_routes import router as stripe_router
-from app.stripe_webhook import router as stripe_webhook_router
+from app.api.pdf_routes import router as pdf_router
+from app.api.stripe_routes import router as stripe_router
+from app.api.stripe_webhook import router as stripe_webhook_router
 
 # =========================================
 # REGISTER ROUTERS

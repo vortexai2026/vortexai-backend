@@ -3,7 +3,7 @@ import psycopg2
 from psycopg2.extras import RealDictCursor
 from fastapi import APIRouter
 from fastapi.responses import FileResponse, JSONResponse
-from app.pdf_generator import generate_pdf  # ✅ FIXED
+from app.pdf_generator import generate_pdf  # ✅ correct import
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -22,9 +22,24 @@ def generate_pdf_for_deal(deal_id: str):
         cur.close()
 
         if not deal:
-            return JSONResponse(status_code=404, content={"error": "Deal not found"})
+            return JSONResponse(
+                status_code=404,
+                content={"error": "Deal not found"}
+            )
 
         if (deal.get("ai_score") or 0) < 75:
             return JSONResponse(
                 status_code=400,
-                content={"error": "Deal is not GREEN enough for
+                content={"error": "Deal is not GREEN enough for PDF generation"}
+            )
+
+        pdf_path = generate_pdf(deal)
+        return FileResponse(
+            pdf_path,
+            media_type="application/pdf",
+            filename=f"deal_{deal_id}.pdf"
+        )
+
+    finally:
+        conn.close()
+

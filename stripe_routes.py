@@ -10,37 +10,51 @@ load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID")
 APP_URL = os.getenv("APP_URL", "http://localhost:8080")
 
-# REQUIRED: set in your .env / Railway variables
-# STRIPE_PRICE_ID should be your Stripe recurring price id for $99/mo
-STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID")
+# -----------------------------------------------------
+# SAFETY CHECKS (DO NOT CRASH APP)
+# -----------------------------------------------------
+STRIPE_ENABLED = True
 
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL not set")
-if not STRIPE_SECRET_KEY:
-    raise RuntimeError("STRIPE_SECRET_KEY not set")
-if not STRIPE_PRICE_ID:
-    raise RuntimeError("STRIPE_PRICE_ID not set (create price in Stripe and paste here)")
 
-stripe.api_key = STRIPE_SECRET_KEY
+if not STRIPE_SECRET_KEY or not STRIPE_PRICE_ID:
+    STRIPE_ENABLED = False
+    print("⚠️ Stripe disabled (missing STRIPE_SECRET_KEY or STRIPE_PRICE_ID)")
+
+if STRIPE_ENABLED:
+    stripe.api_key = STRIPE_SECRET_KEY
 
 router = APIRouter(prefix="/stripe", tags=["stripe"])
 
+# -----------------------------------------------------
+# DB
+# -----------------------------------------------------
 def get_conn():
     return psycopg2.connect(DATABASE_URL)
 
+# -----------------------------------------------------
+# STRIPE CHECKOUT
+# -----------------------------------------------------
 @router.post("/checkout")
 def create_checkout(payload: dict):
     """
     Creates a Stripe checkout session for a buyer subscription.
-    payload expects:
-      - email (required)
-      - name (optional)
-      - location (optional)
-      - asset_type (optional)
-      - budget (optional)
+    SAFE MODE: returns clear message if Stripe is disabled.
     """
+
+    if not STRIPE_ENABLED:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "error": "Stripe is not configured yet",
+                "message": "Payments are temporarily disabled. Please try again later."
+            }
+        )
+
     email = (payload.get("email") or "").strip().lower()
     if not email:
         return JSONResponse(status_code=400, content={"error": "email is required"})
@@ -50,7 +64,10 @@ def create_checkout(payload: dict):
     asset_type = payload.get("asset_type")
     budget = payload.get("budget")
 
-    # Create/update buyer as FREE first (webhook upgrades to PAID)
+    # -------------------------------------------------
+    # Create / update buyer as FREE
+    # Webhook upgrades to PAID
+    # -------------------------------------------------
     conn = get_conn()
     try:
         cur = conn.cursor()
@@ -72,7 +89,8 @@ def create_checkout(payload: dict):
         else:
             buyer_id = str(uuid.uuid4())
             cur.execute("""
-                INSERT INTO buyers (id, name, email, budget, location, asset_type, plan, tier)
+                INSERT INTO buyers
+                (id, name, email, budget, location, asset_type, plan, tier)
                 VALUES (%s,%s,%s,%s,%s,%s,'free','free')
             """, (buyer_id, name, email, budget, location, asset_type))
 
@@ -81,7 +99,9 @@ def create_checkout(payload: dict):
     finally:
         conn.close()
 
-    # Create Stripe checkout session
+    # -------------------------------------------------
+    # Create Stripe Checkout Session
+    # -------------------------------------------------
     session = stripe.checkout.Session.create(
         mode="subscription",
         payment_method_types=["card"],
@@ -95,4 +115,8 @@ def create_checkout(payload: dict):
         }
     )
 
-    return {"checkout_url": session.url, "buyer_id": buyer_id}
+    return {
+        "status": "ok",
+        "checkout_url": session.url,
+        "buyer_id": buyer_id
+    }

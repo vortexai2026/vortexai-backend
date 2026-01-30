@@ -1,72 +1,37 @@
 import os
-from reportlab.lib.pagesizes import LETTER
-from reportlab.pdfgen import canvas
-from datetime import datetime
+import psycopg2
+from psycopg2.extras import RealDictCursor
+from fastapi import APIRouter
+from fastapi.responses import FileResponse, JSONResponse
+from pdf_generator import generate_pdf
 
-PDF_DIR = "pdf_out"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-def ensure_dir():
-    os.makedirs(PDF_DIR, exist_ok=True)
+router = APIRouter(prefix="/pdf", tags=["pdf"])
 
-def generate_pdf(deal: dict) -> str:
-    ensure_dir()
+def get_conn():
+    return psycopg2.connect(DATABASE_URL)
 
-    deal_id = deal.get("id")
-    filename = f"{PDF_DIR}/deal_{deal_id}.pdf"
+@router.post("/generate/{deal_id}")
+def generate_pdf_for_deal(deal_id: str):
+    conn = get_conn()
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT * FROM deals WHERE id=%s", (deal_id,))
+        deal = cur.fetchone()
+        cur.close()
 
-    c = canvas.Canvas(filename, pagesize=LETTER)
-    width, height = LETTER
+        if not deal:
+            return JSONResponse(status_code=404, content={"error": "Deal not found"})
 
-    # Watermark
-    c.setFont("Helvetica-Bold", 36)
-    c.setFillGray(0.9, 0.4)
-    c.rotate(30)
-    c.drawString(150, 100, "DRAFT – HUMAN REVIEW REQUIRED")
-    c.rotate(-30)
-    c.setFillGray(0)
+        if (deal.get("ai_score") or 0) < 75:
+            return JSONResponse(
+                status_code=400,
+                content={"error": "Deal is not GREEN enough for contract"}
+            )
 
-    # Header
-    c.setFont("Helvetica-Bold", 18)
-    c.drawString(50, height - 60, "VortexAI Deal Contract (DRAFT)")
+        pdf_path = generate_pdf(deal)
+        return FileResponse(pdf_path, filename="contract.pdf")
 
-    c.setFont("Helvetica", 10)
-    c.drawString(50, height - 80, f"Generated: {datetime.utcnow()} UTC")
-
-    y = height - 120
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, y, "Deal Details")
-    y -= 20
-
-    c.setFont("Helvetica", 10)
-    fields = [
-        ("Title", deal.get("title")),
-        ("Category", deal.get("category")),
-        ("Asset Type", deal.get("asset_type")),
-        ("Location", deal.get("location")),
-        ("Price", deal.get("price")),
-        ("AI Score", deal.get("ai_score")),
-        ("Estimated Fee", deal.get("estimated_fee")),
-        ("Status", deal.get("status")),
-    ]
-
-    for label, value in fields:
-        c.drawString(50, y, f"{label}: {value}")
-        y -= 15
-
-    y -= 20
-    c.setFont("Helvetica-Bold", 12)
-    c.drawString(50, y, "Signatures (Manual)")
-    y -= 20
-
-    c.setFont("Helvetica", 10)
-    c.drawString(50, y, "Your Company: ______________________   Date: ________")
-    y -= 20
-    c.drawString(50, y, "Buyer: _____________________________   Date: ________")
-    y -= 20
-    c.drawString(50, y, "Seller: ____________________________   Date: ________")
-
-    c.showPage()
-    c.save()
-
-    return filename
-
+    finally:
+        conn.close()

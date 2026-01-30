@@ -11,14 +11,21 @@ router = APIRouter(prefix="/stripe", tags=["stripe"])
 
 @router.post("/checkout")
 def create_checkout():
+    """
+    Creates a Stripe Checkout session for $99/month subscription
+    """
     session = stripe.checkout.Session.create(
         mode="subscription",
         payment_method_types=["card"],
-        line_items=[{
-            "price": "price_BUYER_PRO",  # replace with your real Price ID
-            "quantity": 1
-        }],
+        line_items=[
+            {
+                # 🔴 REPLACE WITH YOUR REAL STRIPE PRICE ID
+                "price": "price_99_monthly",
+                "quantity": 1
+            }
+        ],
         success_url=f"{os.getenv('APP_URL')}/success",
         cancel_url=f"{os.getenv('APP_URL')}/cancel"
     )
-    return {"url": session.url}
+
+    return {"checkout_url": session.url}

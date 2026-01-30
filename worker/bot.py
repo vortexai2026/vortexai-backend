@@ -5,12 +5,11 @@ import requests
 
 API_BASE_URL = os.getenv("API_BASE_URL", "").rstrip("/")
 if not API_BASE_URL:
-    raise RuntimeError("API_BASE_URL missing. Example: https://vortexai-backend-production.up.railway.app")
+    raise RuntimeError("API_BASE_URL missing (example: https://vortexai-backend-production.up.railway.app)")
 
-RUN_MODE = os.getenv("RUN_MODE", "loop")  # once | loop
-SLEEP_SECONDS = int(os.getenv("SLEEP_SECONDS", "900"))  # 15 minutes default
+RUN_MODE = os.getenv("RUN_MODE", "loop")          # once | loop
+SLEEP_SECONDS = int(os.getenv("SLEEP_SECONDS", "900"))  # 15 min
 
-# Start with 3 categories (what you said):
 CATEGORIES = ["business", "real_estate", "cars"]
 
 LOCATIONS = [
@@ -32,41 +31,24 @@ def make_deal(category: str) -> dict:
         "real_estate": ["motivated seller", "foreclosure", "auction", "must sell"],
     }
 
-    loc = random.choice(LOCATIONS)
-    price = random.randint(lo, hi)
-    hint = random.choice(keywords.get(category, ["deal"]))
-
     return {
         "email": "auto@vortexai.com",
         "category": category,
-        "location": loc,
-        "price": price,
-        "description": f"[AUTO] {category} lead - {hint} - posted by bot"
+        "location": random.choice(LOCATIONS),
+        "price": random.randint(lo, hi),
+        "description": f"[AUTO BOT] {category} deal - {random.choice(keywords[category])}"
     }
 
-def post_deal(deal: dict):
-    url = f"{API_BASE_URL}/api/sell"
-    r = requests.post(url, json=deal, timeout=20)
-    try:
-        j = r.json()
-    except:
-        j = {"raw": r.text}
-
-    print("POST", r.status_code, deal["category"], deal["location"], deal["price"], j)
-    return r.status_code
-
 def run_once():
-    # Confirm backend is live
+    # confirm server
     h = requests.get(f"{API_BASE_URL}/health", timeout=10)
     print("health:", h.status_code, h.text)
 
-    sent = 0
     for cat in CATEGORIES:
         deal = make_deal(cat)
-        post_deal(deal)
-        sent += 1
-        time.sleep(1.0)  # be polite
-    print("✅ sent:", sent)
+        r = requests.post(f"{API_BASE_URL}/api/sell", json=deal, timeout=20)
+        print("POST", r.status_code, deal["category"], deal["location"], deal["price"], r.text)
+        time.sleep(1.0)
 
 def main():
     if RUN_MODE == "once":
@@ -75,7 +57,7 @@ def main():
 
     while True:
         run_once()
-        print(f"⏳ sleep {SLEEP_SECONDS}s")
+        print("sleep:", SLEEP_SECONDS)
         time.sleep(SLEEP_SECONDS)
 
 if __name__ == "__main__":

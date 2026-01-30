@@ -29,12 +29,11 @@ def root():
 def health():
     return {"status": "healthy"}
 
-# ✅ IMPORT ROUTERS — ABSOLUTE PACKAGE PATHS
+# ✅ CORRECT IMPORTS (NO app.api)
 from app.pdf_routes import router as pdf_router
 from app.stripe_routes import router as stripe_router
 from app.stripe_webhook import router as stripe_webhook_router
 
-# ✅ REGISTER ROUTERS
 app.include_router(pdf_router)
 app.include_router(stripe_router)
 app.include_router(stripe_webhook_router)

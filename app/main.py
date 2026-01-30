@@ -46,20 +46,25 @@ def send_email(to_email: str, subject: str, html: str):
         print("[EMAIL MOCK]", to_email, subject)
         return
 
-    requests.post(
-        "https://api.brevo.com/v3/smtp/email",
-        headers={
-            "api-key": BREVO_API_KEY,
-            "Content-Type": "application/json"
-        },
-        json={
-            "sender": {"email": FROM_EMAIL},
-            "to": [{"email": to_email}],
-            "subject": subject,
-            "htmlContent": html
-        },
-        timeout=10
-    )
+    try:
+        r = requests.post(
+            "https://api.brevo.com/v3/smtp/email",
+            headers={
+                "api-key": BREVO_API_KEY,
+                "Content-Type": "application/json"
+            },
+            json={
+                "sender": {"email": FROM_EMAIL},
+                "to": [{"email": to_email}],
+                "subject": subject,
+                "htmlContent": html
+            },
+            timeout=15
+        )
+        if r.status_code >= 300:
+            print("[BREVO ERROR]", r.status_code, r.text)
+    except Exception as e:
+        print("[BREVO EXCEPTION]", str(e))
 
 # =====================================================
 # HEALTH
@@ -132,6 +137,7 @@ def match_deal(deal_id: str):
         cur.execute("SELECT * FROM deals WHERE id=%s", (deal_id,))
         deal = cur.fetchone()
         if not deal:
+            cur.close()
             return JSONResponse(status_code=404, content={"error": "Deal not found"})
 
         cur.execute("""
@@ -141,8 +147,8 @@ def match_deal(deal_id: str):
               AND asset_type = %s
               AND location ILIKE %s
         """, (
-            deal["asset_type"],
-            f"%{deal['location']}%"
+            deal.get("asset_type"),
+            f"%{deal.get('location')}%"
         ))
 
         buyers = cur.fetchall()
@@ -163,9 +169,10 @@ def match_deal(deal_id: str):
                 b["email"],
                 "🔥 New Deal Matched",
                 f"""
-                <h3>{deal['title']}</h3>
-                <p>Location: {deal['location']}</p>
-                <p>Price: {deal['price']}</p>
+                <h3>{deal.get('title')}</h3>
+                <p>Location: {deal.get('location')}</p>
+                <p>Price: {deal.get('price')}</p>
+                <p>AI Score: {deal.get('ai_score')}</p>
                 """
             )
 
@@ -186,15 +193,14 @@ def match_deal(deal_id: str):
 @app.get("/api/deals")
 def list_deals(limit: int = 50):
     conn = get_conn()
-    cur = conn.cursor(cursor_factory=RealDictCursor)
-    cur.execute(
-        "SELECT * FROM deals ORDER BY created_at DESC LIMIT %s",
-        (limit,)
-    )
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
-    return {"count": len(rows), "deals": rows}
+    try:
+        cur = conn.cursor(cursor_factory=RealDictCursor)
+        cur.execute("SELECT * FROM deals ORDER BY created_at DESC LIMIT %s", (limit,))
+        rows = cur.fetchall()
+        cur.close()
+        return {"count": len(rows), "deals": rows}
+    finally:
+        conn.close()
 
 # =====================================================
 # STRIPE ROUTES

@@ -1,27 +1,17 @@
-import uuid
-from fastapi import APIRouter
-from app.database import fetch_all, execute
-from app.models import DealCreate
+from pydantic import BaseModel, EmailStr
+from typing import Optional
 
-router = APIRouter(prefix="/deals", tags=["deals"])
+class DealCreate(BaseModel):
+    title: str
+    price: float
+    location: str
+    asset_type: str
+    source: str
 
-@router.post("/create")
-def create_deal(deal: DealCreate):
-    deal_id = str(uuid.uuid4())
 
-    execute("""
-        INSERT INTO deals (id, title, price, location, asset_type)
-        VALUES (%s,%s,%s,%s,%s)
-    """, (
-        deal_id,
-        deal.title,
-        deal.price,
-        deal.location,
-        deal.asset_type
-    ))
-
-    return {"status": "created", "deal_id": deal_id}
-
-@router.get("")
-def list_deals():
-    return fetch_all("SELECT * FROM deals ORDER BY created_at DESC")
+class CheckoutRequest(BaseModel):
+    email: EmailStr
+    name: Optional[str] = None
+    location: Optional[str] = None
+    asset_type: Optional[str] = None
+    budget: Optional[float] = None

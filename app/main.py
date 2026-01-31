@@ -6,7 +6,7 @@ from app.pdf_routes import router as pdf_router
 from app.stripe_routes import router as stripe_router
 from app.stripe_webhook import router as stripe_webhook_router
 
-app = FastAPI(title="VortexAI", version="1.0")
+app = FastAPI(title="VortexAI", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,

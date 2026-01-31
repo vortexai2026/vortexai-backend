@@ -1,0 +1,83 @@
+{
+  "canada": [
+    "Toronto, ON","Mississauga, ON","Brampton, ON","Hamilton, ON","London, ON",
+    "Ottawa, ON","Markham, ON","Vaughan, ON","Kitchener, ON","Waterloo, ON",
+    "Cambridge, ON","Guelph, ON","Barrie, ON","Kingston, ON","Peterborough, ON",
+    "Windsor, ON","Sarnia, ON","Niagara Falls, ON","St. Catharines, ON","Welland, ON",
+
+    "Montreal, QC","Laval, QC","Longueuil, QC","Brossard, QC","Sherbrooke, QC",
+    "Trois-Rivières, QC","Drummondville, QC","Saint-Hyacinthe, QC","Granby, QC",
+    "Saguenay, QC","Chicoutimi, QC","Jonquière, QC","Alma, QC",
+
+    "Vancouver, BC","Burnaby, BC","Surrey, BC","Richmond, BC","Coquitlam, BC",
+    "Langley, BC","Abbotsford, BC","Chilliwack, BC","Mission, BC","Delta, BC",
+    "North Vancouver, BC","West Vancouver, BC","Maple Ridge, BC","New Westminster, BC",
+
+    "Calgary, AB","Edmonton, AB","Red Deer, AB","Lethbridge, AB","Medicine Hat, AB",
+    "Grande Prairie, AB","Fort McMurray, AB","Airdrie, AB","Okotoks, AB","Cochrane, AB",
+
+    "Winnipeg, MB","Steinbach, MB","Brandon, MB","Selkirk, MB","Portage la Prairie, MB",
+
+    "Regina, SK","Saskatoon, SK","Moose Jaw, SK","Prince Albert, SK",
+
+    "Halifax, NS","Dartmouth, NS","Sydney, NS","Truro, NS",
+
+    "St. John's, NL","Mount Pearl, NL","Corner Brook, NL",
+
+    "Charlottetown, PE","Summerside, PE",
+
+    "Fredericton, NB","Moncton, NB","Saint John, NB",
+
+    "Whitehorse, YT","Yellowknife, NT","Iqaluit, NU"
+  ],
+    "usa": [
+    "New York, NY","Brooklyn, NY","Queens, NY","Bronx, NY","Staten Island, NY",
+    "Buffalo, NY","Rochester, NY","Syracuse, NY","Albany, NY",
+
+    "Los Angeles, CA","San Diego, CA","San Jose, CA","San Francisco, CA",
+    "Oakland, CA","Berkeley, CA","Fremont, CA","Santa Clara, CA","Sunnyvale, CA",
+    "Mountain View, CA","Palo Alto, CA","Redwood City, CA","San Mateo, CA",
+    "Sacramento, CA","Stockton, CA","Modesto, CA","Fresno, CA","Bakersfield, CA",
+
+    "Phoenix, AZ","Mesa, AZ","Chandler, AZ","Scottsdale, AZ","Glendale, AZ",
+    "Tempe, AZ","Peoria, AZ",
+
+    "Chicago, IL","Naperville, IL","Aurora, IL","Joliet, IL","Elgin, IL","Evanston, IL",
+
+    "Houston, TX","Dallas, TX","Fort Worth, TX","Plano, TX","Frisco, TX",
+    "Austin, TX","Round Rock, TX","San Antonio, TX","El Paso, TX",
+    "Corpus Christi, TX","Laredo, TX","McAllen, TX",
+
+    "Miami, FL","Fort Lauderdale, FL","Hollywood, FL","Boca Raton, FL",
+    "West Palm Beach, FL","Orlando, FL","Kissimmee, FL","Tampa, FL","St. Petersburg, FL",
+    "Clearwater, FL","Jacksonville, FL","Tallahassee, FL",
+
+    "Seattle, WA","Bellevue, WA","Redmond, WA","Kirkland, WA","Renton, WA",
+    "Tacoma, WA","Everett, WA","Olympia, WA",
+
+    "Portland, OR","Beaverton, OR","Hillsboro, OR","Gresham, OR","Salem, OR",
+
+    "Denver, CO","Aurora, CO","Lakewood, CO","Boulder, CO","Fort Collins, CO",
+    "Colorado Springs, CO","Pueblo, CO",
+
+    "Las Vegas, NV","Henderson, NV","North Las Vegas, NV","Reno, NV","Sparks, NV",
+
+    "Atlanta, GA","Marietta, GA","Alpharetta, GA","Roswell, GA","Decatur, GA",
+    "Savannah, GA","Augusta, GA",
+
+    "Boston, MA","Cambridge, MA","Somerville, MA","Quincy, MA","Lowell, MA",
+    "Worcester, MA","Springfield, MA",
+
+    "Philadelphia, PA","Allentown, PA","Bethlehem, PA","Reading, PA",
+    "Pittsburgh, PA","Erie, PA","Scranton, PA",
+
+    "Detroit, MI","Dearborn, MI","Livonia, MI","Warren, MI","Sterling Heights, MI",
+    "Ann Arbor, MI","Lansing, MI","Grand Rapids, MI",
+
+    "Minneapolis, MN","St. Paul, MN","Bloomington, MN","Eagan, MN","Edina, MN",
+    "Rochester, MN","Duluth, MN",
+
+    "Charlotte, NC","Raleigh, NC","Durham, NC","Chapel Hill, NC","Greensboro, NC",
+    "Winston-Salem, NC","Fayetteville, NC"
+  ]
+}

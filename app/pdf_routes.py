@@ -1,37 +1,23 @@
+from reportlab.lib.pagesizes import LETTER
+from reportlab.pdfgen import canvas
+import uuid
 import os
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from fastapi import APIRouter
-from fastapi.responses import FileResponse, JSONResponse
-from pdf_generator import generate_pdf
 
-DATABASE_URL = os.getenv("DATABASE_URL")
+def generate_pdf(deal: dict) -> str:
+    filename = f"/tmp/contract_{uuid.uuid4()}.pdf"
+    c = canvas.Canvas(filename, pagesize=LETTER)
 
-router = APIRouter(prefix="/pdf", tags=["pdf"])
+    c.setFont("Helvetica", 12)
+    c.drawString(50, 750, "VortexAI Deal Contract")
+    c.drawString(50, 720, f"Title: {deal.get('title','')}")
+    c.drawString(50, 700, f"Location: {deal.get('location','')}")
+    c.drawString(50, 680, f"Price: {deal.get('price','')}")
+    c.drawString(50, 660, f"AI Score: {deal.get('ai_score','')}")
 
-def get_conn():
-    return psycopg2.connect(DATABASE_URL)
+    c.drawString(50, 620, "This contract is auto-generated for review.")
+    c.drawString(50, 600, "Final approval required before signing.")
 
-@router.post("/generate/{deal_id}")
-def generate_pdf_for_deal(deal_id: str):
-    conn = get_conn()
-    try:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT * FROM deals WHERE id=%s", (deal_id,))
-        deal = cur.fetchone()
-        cur.close()
+    c.showPage()
+    c.save()
 
-        if not deal:
-            return JSONResponse(status_code=404, content={"error": "Deal not found"})
-
-        if (deal.get("ai_score") or 0) < 75:
-            return JSONResponse(
-                status_code=400,
-                content={"error": "Deal is not GREEN enough for contract"}
-            )
-
-        pdf_path = generate_pdf(deal)
-        return FileResponse(pdf_path, media_type="application/pdf", filename="contract.pdf")
-
-    finally:
-        conn.close()
+    return filename

@@ -1,27 +1,27 @@
-from sqlalchemy import Column, Integer, String, DateTime, Text
-from sqlalchemy.orm import declarative_base
-from datetime import datetime
+import uuid
+from fastapi import APIRouter
+from app.database import fetch_all, execute
+from app.models import DealCreate
 
-Base = declarative_base()
+router = APIRouter(prefix="/deals", tags=["deals"])
 
-class Buyer(Base):
-    __tablename__ = "buyers"
-    id = Column(Integer, primary_key=True)
-    name = Column(String)
-    email = Column(String)
-    asset_type = Column(String)
-    location = Column(String)
-    tier = Column(String)
+@router.post("/create")
+def create_deal(deal: DealCreate):
+    deal_id = str(uuid.uuid4())
 
-class Deal(Base):
-    __tablename__ = "deals"
-    id = Column(Integer, primary_key=True)
-    created_at = Column(DateTime, default=datetime.utcnow)
-    title = Column(String)
-    asset_type = Column(String)
-    location = Column(String)
-    price = Column(String)
-    status = Column(String, default="new")
-    matched_buyer_id = Column(Integer)
-    notes = Column(Text)
+    execute("""
+        INSERT INTO deals (id, title, price, location, asset_type)
+        VALUES (%s,%s,%s,%s,%s)
+    """, (
+        deal_id,
+        deal.title,
+        deal.price,
+        deal.location,
+        deal.asset_type
+    ))
 
+    return {"status": "created", "deal_id": deal_id}
+
+@router.get("")
+def list_deals():
+    return fetch_all("SELECT * FROM deals ORDER BY created_at DESC")

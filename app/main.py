@@ -29,7 +29,6 @@ def root():
 def health():
     return {"status": "healthy"}
 
-# register routes
 app.include_router(pdf_router)
 app.include_router(stripe_router)
 app.include_router(stripe_webhook_router)

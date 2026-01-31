@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# ROUTES
 from deals_routes import router as deals_router
 
 app = FastAPI(
@@ -9,9 +8,6 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# -----------------------------
-# CORS (OPEN FOR NOW)
-# -----------------------------
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -19,9 +15,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# -----------------------------
-# BASIC HEALTH ROUTES
-# -----------------------------
 @app.get("/")
 def root():
     return {
@@ -34,7 +27,5 @@ def root():
 def health():
     return {"status": "healthy"}
 
-# -----------------------------
-# REGISTER ROUTES
-# -----------------------------
+# REGISTER DEALS
 app.include_router(deals_router)

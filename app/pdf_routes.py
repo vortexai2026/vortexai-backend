@@ -1,8 +1,9 @@
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from fastapi import APIRouter
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import APIRouter, HTTPException
+from fastapi.responses import FileResponse
+from uuid import UUID
 
 from pdf_generator import generate_pdf
 
@@ -10,36 +11,41 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 
 router = APIRouter(prefix="/pdf", tags=["pdf"])
 
-
 def get_conn():
+    if not DATABASE_URL:
+        raise RuntimeError("DATABASE_URL not set")
     return psycopg2.connect(DATABASE_URL)
-
 
 @router.post("/generate/{deal_id}")
 def generate_pdf_for_deal(deal_id: str):
-    conn = get_conn()
+
     try:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT * FROM deals WHERE id=%s", (deal_id,))
-        deal = cur.fetchone()
-        cur.close()
+        UUID(deal_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid deal_id UUID")
 
-        if not deal:
-            return JSONResponse(status_code=404, content={"error": "Deal not found"})
+    conn = get_conn()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        if (deal.get("ai_score") or 0) < 75:
-            return JSONResponse(
-                status_code=400,
-                content={"error": "Deal is not GREEN enough for contract generation"}
-            )
+    cur.execute("SELECT * FROM deals WHERE id = %s", (deal_id,))
+    deal = cur.fetchone()
 
-        pdf_path = generate_pdf(deal)
+    cur.close()
+    conn.close()
 
-        return FileResponse(
-            pdf_path,
-            media_type="application/pdf",
-            filename=os.path.basename(pdf_path)
+    if not deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+
+    if (deal.get("ai_score") or 0) < 75:
+        raise HTTPException(
+            status_code=400,
+            detail="Deal is not GREEN enough for PDF generation"
         )
 
-    finally:
-        conn.close()
+    pdf_path = generate_pdf(deal)
+
+    return FileResponse(
+        pdf_path,
+        media_type="application/pdf",
+        filename=f"deal_{deal_id}.pdf"
+    )

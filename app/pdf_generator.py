@@ -1,43 +1,27 @@
-from fpdf import FPDF
+from reportlab.lib.pagesizes import LETTER
+from reportlab.pdfgen import canvas
+import tempfile
 import os
-from datetime import datetime
-
 
 def generate_pdf(deal: dict) -> str:
-    """
-    Generates a PDF contract for a deal.
-    Returns the file path.
-    """
+    fd, path = tempfile.mkstemp(suffix=".pdf")
+    os.close(fd)
 
-    pdf = FPDF()
-    pdf.add_page()
-    pdf.set_auto_page_break(auto=True, margin=15)
+    c = canvas.Canvas(path, pagesize=LETTER)
+    width, height = LETTER
 
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "VortexAI Deal Summary", ln=True)
+    y = height - 50
+    c.setFont("Helvetica", 12)
 
-    pdf.ln(5)
-    pdf.set_font("Arial", size=12)
+    c.drawString(50, y, "VortexAI Deal Report")
+    y -= 30
 
-    fields = {
-        "Title": deal.get("title"),
-        "Location": deal.get("location"),
-        "Price": deal.get("price"),
-        "AI Score": deal.get("ai_score"),
-        "Asset Type": deal.get("asset_type"),
-        "Category": deal.get("category"),
-        "Created At": str(deal.get("created_at")),
-    }
+    for key, value in deal.items():
+        c.drawString(50, y, f"{key}: {value}")
+        y -= 18
+        if y < 50:
+            c.showPage()
+            y = height - 50
 
-    for k, v in fields.items():
-        pdf.cell(0, 8, f"{k}: {v}", ln=True)
-
-    pdf.ln(10)
-    pdf.set_font("Arial", "I", 10)
-    pdf.cell(0, 8, f"Generated {datetime.utcnow()} UTC", ln=True)
-
-    os.makedirs("/tmp/pdfs", exist_ok=True)
-    file_path = f"/tmp/pdfs/deal_{deal['id']}.pdf"
-    pdf.output(file_path)
-
-    return file_path
+    c.save()
+    return path

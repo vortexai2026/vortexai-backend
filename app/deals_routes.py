@@ -8,8 +8,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL not set")
 
 router = APIRouter(prefix="/deals", tags=["deals"])
 
@@ -17,70 +15,49 @@ def get_conn():
     return psycopg2.connect(DATABASE_URL)
 
 # -----------------------------
-# CREATE DEAL (TEST / MANUAL)
+# CREATE DEAL
 # -----------------------------
 @router.post("/create")
 def create_deal(payload: dict):
     title = payload.get("title")
-    location = payload.get("location")
     price = payload.get("price")
-    ai_score = payload.get("ai_score", 50)
+    location = payload.get("location")
 
-    if not title or not location or price is None:
-        raise HTTPException(status_code=400, detail="title, location, price required")
+    if not title or not price or not location:
+        raise HTTPException(status_code=400, detail="title, price, location required")
 
     deal_id = str(uuid.uuid4())
 
     conn = get_conn()
     try:
         cur = conn.cursor()
-        cur.execute(
-            """
-            INSERT INTO deals (id, title, location, price, ai_score, status)
+        cur.execute("""
+            INSERT INTO deals (id, title, price, location, ai_score, status)
             VALUES (%s, %s, %s, %s, %s, %s)
-            """,
-            (deal_id, title, location, price, ai_score, "new")
-        )
+        """, (
+            deal_id,
+            title,
+            price,
+            location,
+            80,          -- test AI score
+            "new"
+        ))
         conn.commit()
         cur.close()
     finally:
         conn.close()
 
-    return {
-        "id": deal_id,
-        "status": "created"
-    }
+    return {"status": "created", "deal_id": deal_id}
 
 # -----------------------------
-# GET ALL DEALS
+# LIST DEALS
 # -----------------------------
-@router.get("")
+@router.get("/")
 def list_deals():
     conn = get_conn()
-    try:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT * FROM deals ORDER BY created_at DESC")
-        rows = cur.fetchall()
-        cur.close()
-        return rows
-    finally:
-        conn.close()
-
-# -----------------------------
-# GET SINGLE DEAL
-# -----------------------------
-@router.get("/{deal_id}")
-def get_deal(deal_id: str):
-    conn = get_conn()
-    try:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT * FROM deals WHERE id=%s", (deal_id,))
-        deal = cur.fetchone()
-        cur.close()
-
-        if not deal:
-            raise HTTPException(status_code=404, detail="Deal not found")
-
-        return deal
-    finally:
-        conn.close()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
+    cur.execute("SELECT * FROM deals ORDER BY created_at DESC LIMIT 20")
+    rows = cur.fetchall()
+    cur.close()
+    conn.close()
+    return rows

@@ -4,7 +4,7 @@ from psycopg2.extras import RealDictCursor
 from fastapi import APIRouter
 from fastapi.responses import FileResponse, JSONResponse
 
-from pdf_generator import generate_pdf  # ✅ NO app. prefix
+from pdf_generator import generate_pdf
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
@@ -16,34 +16,30 @@ def get_conn():
 @router.post("/generate/{deal_id}")
 def generate_pdf_for_deal(deal_id: str):
     conn = get_conn()
-    try:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("SELECT * FROM deals WHERE id=%s", (deal_id,))
-        deal = cur.fetchone()
-        cur.close()
-        conn.close()
+    cur = conn.cursor(cursor_factory=RealDictCursor)
 
-        if not deal:
-            return JSONResponse(
-                status_code=404,
-                content={"error": "Deal not found"}
-            )
+    cur.execute("SELECT * FROM deals WHERE id=%s", (deal_id,))
+    deal = cur.fetchone()
 
-        if (deal.get("ai_score") or 0) < 75:
-            return JSONResponse(
-                status_code=400,
-                content={"error": "Deal is not GREEN enough for PDF"}
-            )
+    cur.close()
+    conn.close()
 
-        pdf_path = generate_pdf(deal)
-        return FileResponse(
-            pdf_path,
-            media_type="application/pdf",
-            filename=f"deal_{deal_id}.pdf"
-        )
-
-    except Exception as e:
+    if not deal:
         return JSONResponse(
-            status_code=500,
-            content={"error": str(e)}
+            status_code=404,
+            content={"error": "Deal not found"}
         )
+
+    if (deal.get("ai_score") or 0) < 75:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Deal is not GREEN enough for PDF"}
+        )
+
+    pdf_path = generate_pdf(deal)
+
+    return FileResponse(
+        pdf_path,
+        media_type="application/pdf",
+        filename=f"deal_{deal_id}.pdf"
+    )

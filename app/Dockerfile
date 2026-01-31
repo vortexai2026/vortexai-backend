@@ -2,11 +2,12 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# copy requirements from app folder
-COPY app/requirements.txt ./requirements.txt
+# requirements.txt is in the SAME folder as Dockerfile
+COPY requirements.txt .
+
 RUN pip install --no-cache-dir -r requirements.txt
 
-# copy app code
-COPY app/ .
+# copy all app code
+COPY . .
 
 CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8080"]

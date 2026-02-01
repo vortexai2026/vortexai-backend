@@ -1,19 +1,57 @@
-from typing import Dict
+from typing import Dict, Any
 
-def decide_action(scores: Dict[str, float]) -> str:
+
+def decide_action(
+    deal: Dict[str, Any],
+    scores: Dict[str, float]
+) -> Dict[str, Any]:
     """
-    Level 3 Decision AI
+    LEVEL 3 – DECISION AI
+
+    Purpose:
+    - Take Level 2 scores
+    - Decide WHAT to do with the deal
+    - No OpenAI required
+    - Deterministic + stable
+
+    Possible actions:
+    - notify_buyers
+    - queue_for_review
+    - discard
     """
 
+    ai_score = scores.get("ai_score", 0)
     profit = scores.get("profit_score", 0)
     urgency = scores.get("urgency_score", 0)
     risk = scores.get("risk_score", 0)
-    ai_score = scores.get("ai_score", 0)
 
-    if ai_score >= 60 and profit >= 60 and risk <= 30:
-        return "hot"
+    # -----------------------------
+    # DECISION RULES
+    # -----------------------------
 
-    if ai_score >= 40 and risk <= 50:
-        return "review"
+    # 🔥 HOT DEAL
+    if ai_score >= 70 and profit >= 50 and risk <= 40:
+        action = "notify_buyers"
+        priority = "high"
 
-    return "reject"
+    # 🟡 MAYBE DEAL
+    elif ai_score >= 40 and risk <= 60:
+        action = "queue_for_review"
+        priority = "medium"
+
+    # ❌ BAD DEAL
+    else:
+        action = "discard"
+        priority = "low"
+
+    # -----------------------------
+    # RETURN DECISION
+    # -----------------------------
+    return {
+        "action": action,
+        "priority": priority,
+        "ai_score": ai_score,
+        "profit_score": profit,
+        "urgency_score": urgency,
+        "risk_score": risk,
+    }

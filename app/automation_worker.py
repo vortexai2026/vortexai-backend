@@ -1,10 +1,7 @@
-"""
-VortexAI Worker Entrypoint
-Level 6–7 Automation Runner
-"""
+import time
 
-from app.automation_worker import run_worker
+print("🤖 VortexAI Automation Worker Booting...")
 
-if __name__ == "__main__":
-    print("🚀 Starting VortexAI Worker...")
-    run_worker()
+while True:
+    print("🔁 Worker heartbeat OK")
+    time.sleep(30)

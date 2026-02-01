@@ -1,26 +1,40 @@
-from reportlab.lib.pagesizes import LETTER
+from io import BytesIO
+from reportlab.lib.pagesizes import letter
 from reportlab.pdfgen import canvas
-import io
+from typing import Dict, Any
 
-def generate_pdf(deal: dict) -> bytes:
-    buffer = io.BytesIO()
-    c = canvas.Canvas(buffer, pagesize=LETTER)
-
-    width, height = LETTER
-    y = height - 40
+def generate_pdf(deal: Dict[str, Any]) -> bytes:
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    w, h = letter
 
     c.setFont("Helvetica-Bold", 16)
-    c.drawString(40, y, "VortexAI Deal Report")
-    y -= 40
+    c.drawString(50, h - 60, "VortexAI Deal Report")
 
     c.setFont("Helvetica", 11)
-    for key, value in deal.items():
-        c.drawString(40, y, f"{key}: {value}")
-        y -= 18
-        if y < 40:
-            c.showPage()
-            y = height - 40
+    y = h - 100
 
+    fields = [
+        ("Deal ID", str(deal.get("id"))),
+        ("Title", str(deal.get("title"))),
+        ("Price", str(deal.get("price"))),
+        ("Location", str(deal.get("location"))),
+        ("Asset Type", str(deal.get("asset_type"))),
+        ("Source", str(deal.get("source"))),
+        ("Status", str(deal.get("status"))),
+        ("AI Score", str(deal.get("ai_score"))),
+        ("Profit Score", str(deal.get("profit_score"))),
+        ("Urgency Score", str(deal.get("urgency_score"))),
+        ("Risk Score", str(deal.get("risk_score"))),
+    ]
+
+    for k, v in fields:
+        c.drawString(50, y, f"{k}: {v}")
+        y -= 18
+
+    c.showPage()
     c.save()
-    buffer.seek(0)
-    return buffer.read()
+
+    pdf_data = buffer.getvalue()
+    buffer.close()
+    return pdf_data

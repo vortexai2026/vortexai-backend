@@ -1,13 +1,26 @@
-from typing import Dict
+def strategy_boost(location: str, asset_type: str) -> float:
+    """
+    Level 6 Strategy AI
+    """
 
-def region_strategy(location: str, asset_type: str) -> Dict[str, str]:
-    loc = (location or "").lower()
-    at = (asset_type or "").lower()
+    location = (location or "").lower()
+    asset_type = (asset_type or "").lower()
 
-    if "winnipeg" in loc and at == "real_estate":
-        return {"strategy": "wholesale", "note": "focus on motivated sellers, under 250k"}
-    if "toronto" in loc and at == "real_estate":
-        return {"strategy": "off-market", "note": "Toronto is competitive; require stronger margins"}
-    if at in ("cars", "car"):
-        return {"strategy": "flip", "note": "focus on clean title and under 12k buys"}
-    return {"strategy": "general", "note": "default strategy rules"}
+    boost = 0.0
+
+    # Strong regions
+    strong_cities = [
+        "toronto", "vancouver", "calgary",
+        "winnipeg", "edmonton", "miami",
+        "phoenix", "dallas", "atlanta"
+    ]
+
+    if any(city in location for city in strong_cities):
+        boost += 0.05
+
+    # Strong categories
+    if asset_type in ("real_estate", "cars", "business"):
+        boost += 0.05
+
+    return boost
+

@@ -1,17 +1,19 @@
-from typing import Dict, Any
+from typing import Dict
 
-def decide_next_action(deal: Dict[str, Any]) -> Dict[str, Any]:
+def decide_action(scores: Dict[str, float]) -> str:
     """
-    Level 3: decision AI - what should we do next?
+    Level 3 Decision AI
     """
 
-    score = float(deal.get("ai_score") or 0)
-    risk = float(deal.get("risk_score") or 0)
+    profit = scores.get("profit_score", 0)
+    urgency = scores.get("urgency_score", 0)
+    risk = scores.get("risk_score", 0)
+    ai_score = scores.get("ai_score", 0)
 
-    if risk >= 75:
-        return {"decision": "reject", "reason": "risk too high"}
-    if score >= 75:
-        return {"decision": "push", "reason": "high score - notify VIP buyers"}
-    if score >= 55:
-        return {"decision": "review", "reason": "medium score - send to manual review"}
-    return {"decision": "hold", "reason": "low score - keep but don't notify"}
+    if ai_score >= 60 and profit >= 60 and risk <= 30:
+        return "hot"
+
+    if ai_score >= 40 and risk <= 50:
+        return "review"
+
+    return "reject"

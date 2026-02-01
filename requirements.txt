@@ -4,4 +4,3 @@ psycopg2-binary
 stripe
 reportlab
 pydantic[email]
-python-dotenv

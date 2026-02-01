@@ -1,78 +1,20 @@
-import os
-import requests
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from fastapi import APIRouter
+from typing import Dict, Any, List
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-APP_URL = os.getenv("APP_URL", "http://localhost:8080")
-ADMIN_EMAIL = os.getenv("ADMIN_EMAIL", "vortexAIinvestors@gmail.com")
+def match_buyers_stub(deal: Dict[str, Any]) -> List[Dict[str, Any]]:
+    """
+    Level 4: action AI - match to buyers.
+    This is a stub: later we match from DB buyers table.
+    """
+    # For now just returns a placeholder match list
+    return [{"buyer_email": "vip@example.com", "match_reason": "stub match"}]
 
-BREVO_API_KEY = os.getenv("BREVO_API_KEY")
-FROM_EMAIL = os.getenv("FROM_EMAIL", "noreply@vortexai.local")
+def action_plan(deal: Dict[str, Any]) -> Dict[str, Any]:
+    decision = deal.get("decision", "hold")
 
-router = APIRouter(prefix="/ai/action", tags=["ai-level4"])
-
-def get_conn():
-    return psycopg2.connect(DATABASE_URL)
-
-def send_email(to_email: str, subject: str, html: str):
-    if not BREVO_API_KEY:
-        print("[EMAIL MOCK]", to_email, subject)
-        return
-
-    requests.post(
-        "https://api.brevo.com/v3/smtp/email",
-        headers={"api-key": BREVO_API_KEY, "Content-Type": "application/json"},
-        json={
-            "sender": {"email": FROM_EMAIL},
-            "to": [{"email": to_email}],
-            "subject": subject,
-            "htmlContent": html
-        },
-        timeout=15
-    )
-
-@router.post("/run-once")
-def run_actions_once():
-    conn = get_conn()
-    try:
-        cur = conn.cursor(cursor_factory=RealDictCursor)
-        cur.execute("""
-            select * from ai_actions
-            where status='queued'
-            order by created_at asc
-            limit 10
-        """)
-        actions = cur.fetchall()
-
-        for a in actions:
-            deal_id = a["deal_id"]
-            action = a["action"]
-
-            if action == "auto_approve":
-                # trigger PDF generation
-                pdf_url = f"{APP_URL}/pdf/generate/{deal_id}"
-                send_email(
-                    ADMIN_EMAIL,
-                    "✅ Deal auto-approved (PDF ready)",
-                    f"<p>Deal approved: {deal_id}</p><p>Generate PDF: {pdf_url}</p>"
-                )
-
-            elif action == "review":
-                send_email(
-                    ADMIN_EMAIL,
-                    "🟡 Deal needs review",
-                    f"<p>Deal needs review: {deal_id}</p>"
-                )
-
-            elif action == "reject":
-                # no email needed, but could log
-                pass
-
-            cur.execute("update ai_actions set status='done' where id=%s", (a["id"],))
-
-        conn.commit()
-        return {"processed": len(actions)}
-    finally:
-        conn.close()
+    if decision == "push":
+        return {"action": "notify", "channel": ["email", "sms"], "priority": "high"}
+    if decision == "review":
+        return {"action": "queue_manual_review", "priority": "medium"}
+    if decision == "reject":
+        return {"action": "archive", "priority": "low"}
+    return {"action": "hold", "priority": "low"}

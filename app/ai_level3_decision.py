@@ -1,14 +1,10 @@
-from typing import Dict, Any
+from app.config.money_rules import SCORING_THRESHOLDS
 
-def decide_action(scores: Dict[str, float], deal: Dict[str, Any]) -> str:
-    ai_score = float(scores.get("ai_score", 0))
-    risk = float(scores.get("risk_score", 0))
-    urgency = float(scores.get("urgency_score", 0))
-
-    if risk >= 70:
-        return "reject"
-    if ai_score >= 75 and urgency >= 40:
-        return "contact_now"
-    if ai_score >= 60:
-        return "review"
-    return "watch"
+def decide_action(scores: dict) -> str:
+    if (
+        scores["profit"] >= SCORING_THRESHOLDS["min_profit"]
+        and scores["urgency"] >= SCORING_THRESHOLDS["min_urgency"]
+        and scores["risk"] <= SCORING_THRESHOLDS["max_risk"]
+    ):
+        return "KEEP"
+    return "SKIP"

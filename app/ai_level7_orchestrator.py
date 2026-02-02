@@ -1,13 +1,15 @@
-from app.ai_failsafe import failsafe_check
-from app.ai_source_health import evaluate_sources
-from app.ai_level6_strategy import run_strategy
-from app.ai_activity_log import log_ai_action
+from app.ai_level2_scoring import score_deal
+from app.ai_level3_decision import decide_action
+from app.ai_level4_action import take_action
+from app.database import fetch_all
 
-def run_orchestrator():
-    failsafe_check()
+def run_cycle():
+    deals = fetch_all("SELECT * FROM deals WHERE processed=false")
 
-    evaluate_sources()
-    log_ai_action(7, "SOURCE_EVAL", "Checked source health")
+    for deal in deals:
+        scores = score_deal(deal)
+        decision = decide_action(scores)
 
-    run_strategy()
-    log_ai_action(7, "STRATEGY_RUN", "Updated priorities")
+        if decision == "KEEP":
+            deal.update(scores)
+            take_action(deal)

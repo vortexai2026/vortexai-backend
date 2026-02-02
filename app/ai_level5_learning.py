@@ -1,7 +1,7 @@
-def learn_adjustment(outcome: str) -> float:
-    outcome = (outcome or "").lower().strip()
-    if outcome in ("sold", "closed", "profit"):
-        return 0.10
-    if outcome in ("failed", "scam", "loss"):
-        return -0.10
-    return 0.0
+from app.database import execute
+
+def log_feedback(deal_id: int, outcome: str):
+    execute(
+        "INSERT INTO deal_feedback (deal_id, outcome) VALUES (%s, %s)",
+        (deal_id, outcome)
+    )

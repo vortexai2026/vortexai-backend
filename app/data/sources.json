@@ -1,7 +1,7 @@
 {
   "real_estate": [
-    {"name":"Craigslist RE 1","type":"rss","country":"USA","url":"https://craigslist.org/search/rea?format=rss"},
-    {"name":"Craigslist RE 2","type":"rss","country":"CANADA","url":"https://craigslist.ca/search/rea?format=rss"},
+    {"name":"Craigslist RE USA","type":"rss","country":"USA","url":"https://craigslist.org/search/rea?format=rss"},
+    {"name":"Craigslist RE Canada","type":"rss","country":"CANADA","url":"https://craigslist.ca/search/rea?format=rss"},
     {"name":"Zillow","type":"html","country":"USA","url":"https://www.zillow.com/homes/for_sale/"},
     {"name":"Realtor","type":"html","country":"USA","url":"https://www.realtor.com/realestateandhomes-search"},
     {"name":"Redfin","type":"html","country":"USA","url":"https://www.redfin.com"},
@@ -12,40 +12,10 @@
     {"name":"LandWatch","type":"html","country":"USA","url":"https://www.landwatch.com"},
     {"name":"LandAndFarm","type":"html","country":"USA","url":"https://www.landandfarm.com"},
     {"name":"Point2Homes","type":"html","country":"GLOBAL","url":"https://www.point2homes.com"},
-    {"name":"Kijiji RE","type":"html","country":"CANADA","url":"https://www.kijiji.ca/b-real-estate"},
-    {"name":"Facebook Marketplace Property","type":"html","country":"GLOBAL","url":"https://www.facebook.com/marketplace/category/propertyforsale"},
+    {"name":"Kijiji Real Estate","type":"html","country":"CANADA","url":"https://www.kijiji.ca/b-real-estate"},
+    {"name":"Facebook Marketplace Property","type":"html","country":"GLOBAL","url":"https://www.facebook.com/marketplace/category/propertyforsale"}
+  ],
 
-    {"name":"RE Source 15","type":"html","country":"USA","url":"https://www.homes.com"},
-    {"name":"RE Source 16","type":"html","country":"USA","url":"https://www.movoto.com"},
-    {"name":"RE Source 17","type":"html","country":"USA","url":"https://www.trulia.com"},
-    {"name":"RE Source 18","type":"html","country":"USA","url":"https://www.century21.com"},
-    {"name":"RE Source 19","type":"html","country":"USA","url":"https://www.coldwellbanker.com"},
-    {"name":"RE Source 20","type":"html","country":"USA","url":"https://www.remax.com"},
-
-    {"name":"RE Auction 21","type":"html","country":"USA","url":"https://www.xome.com"},
-    {"name":"RE Auction 22","type":"html","country":"USA","url":"https://www.realtytrac.com"},
-    {"name":"RE Auction 23","type":"html","country":"USA","url":"https://www.usmarshals.gov/what-we-do/asset-forfeiture/sales"},
-    {"name":"RE Auction 24","type":"html","country":"USA","url":"https://www.hudhomestore.gov"},
-
-    {"name":"RE MLS Mirror 25","type":"html","country":"USA","url":"https://www.mlslistings.com"},
-    {"name":"RE MLS Mirror 26","type":"html","country":"USA","url":"https://www.miamirealestate.com"},
-    {"name":"RE MLS Mirror 27","type":"html","country":"USA","url":"https://www.nymls.com"},
-
-    {"name":"RE Global 28","type":"html","country":"GLOBAL","url":"https://www.rightmove.co.uk"},
-    {"name":"RE Global 29","type":"html","country":"GLOBAL","url":"https://www.zoopla.co.uk"},
-    {"name":"RE Global 30","type":"html","country":"GLOBAL","url":"https://www.realestate.com.au"},
-
-    {"name":"RE Local 31","type":"html","country":"USA","url":"https://www.localhomes.com"},
-    {"name":"RE Local 32","type":"html","country":"USA","url":"https://www.homefinder.com"},
-    {"name":"RE Local 33","type":"html","country":"USA","url":"https://www.propertyshark.com"},
-
-    {"name":"RE Extra 34","type":"html","country":"USA","url":"https://www.rent.com"},
-    {"name":"RE Extra 35","type":"html","country":"USA","url":"https://www.apartments.com"}
-
-    /* Continue same pattern up to 75 */
-  ]
-}
-{
   "cars": [
     {"name":"Craigslist Cars","type":"rss","country":"USA","url":"https://craigslist.org/search/cta?format=rss"},
     {"name":"Facebook Marketplace Cars","type":"html","country":"GLOBAL","url":"https://www.facebook.com/marketplace/category/vehicles"},
@@ -53,40 +23,22 @@
     {"name":"AutoTrader Canada","type":"html","country":"CANADA","url":"https://www.autotrader.ca"},
     {"name":"Cars.com","type":"html","country":"USA","url":"https://www.cars.com"},
     {"name":"CarGurus","type":"html","country":"USA","url":"https://www.cargurus.com"},
-    {"name":"BringATrailer","type":"html","country":"USA","url":"https://bringatrailer.com"},
+    {"name":"Bring a Trailer","type":"html","country":"USA","url":"https://bringatrailer.com"},
     {"name":"Copart","type":"html","country":"USA","url":"https://www.copart.com"},
     {"name":"IAAI","type":"html","country":"USA","url":"https://www.iaai.com"},
-    {"name":"Hemmings","type":"html","country":"USA","url":"https://www.hemmings.com"},
+    {"name":"Hemmings","type":"html","country":"USA","url":"https://www.hemmings.com"}
+  ],
 
-    {"name":"Car Source 11","type":"html","country":"USA","url":"https://www.truecar.com"},
-    {"name":"Car Source 12","type":"html","country":"USA","url":"https://www.edmunds.com"},
-    {"name":"Car Source 13","type":"html","country":"USA","url":"https://www.autolist.com"},
-    {"name":"Car Source 14","type":"html","country":"USA","url":"https://www.roadtrippers.com"},
-    {"name":"Car Source 15","type":"html","country":"USA","url":"https://www.carmax.com"},
-    {"name":"Car Source 16","type":"html","country":"USA","url":"https://www.carvana.com"}
-
-    /* Continue pattern to 75 */
-  ]
-}
-{
   "businesses": [
     {"name":"BizBuySell","type":"html","country":"USA","url":"https://www.bizbuysell.com"},
     {"name":"BizQuest","type":"html","country":"USA","url":"https://www.bizquest.com"},
-    {"name":"BusinessesForSale","type":"html","country":"GLOBAL","url":"https://www.businessesforsale.com"},
+    {"name":"Businesses For Sale","type":"html","country":"GLOBAL","url":"https://www.businessesforsale.com"},
     {"name":"LoopNet Businesses","type":"html","country":"USA","url":"https://www.loopnet.com/businesses-for-sale"},
     {"name":"Flippa","type":"html","country":"GLOBAL","url":"https://www.flippa.com"},
     {"name":"Acquire","type":"html","country":"GLOBAL","url":"https://acquire.com"},
     {"name":"Empire Flippers","type":"html","country":"GLOBAL","url":"https://empireflippers.com"},
     {"name":"MicroAcquire","type":"html","country":"GLOBAL","url":"https://microacquire.com"},
-    {"name":"Facebook Wholesale","type":"html","country":"GLOBAL","url":"https://www.facebook.com/groups"},
-    {"name":"Gov Deals","type":"html","country":"USA","url":"https://www.govdeals.com"},
-
-    {"name":"Wholesale 11","type":"html","country":"USA","url":"https://www.liquidation.com"},
-    {"name":"Wholesale 12","type":"html","country":"USA","url":"https://www.publicsurplus.com"},
-    {"name":"Wholesale 13","type":"html","country":"USA","url":"https://www.bullseyeindustrial.com"},
-    {"name":"Wholesale 14","type":"html","country":"USA","url":"https://www.directliquidation.com"},
-    {"name":"Wholesale 15","type":"html","country":"USA","url":"https://www.bstock.com"}
-
-    /* Continue pattern to 75 */
+    {"name":"Facebook Wholesale Groups","type":"html","country":"GLOBAL","url":"https://www.facebook.com/groups"},
+    {"name":"GovDeals","type":"html","country":"USA","url":"https://www.govdeals.com"}
   ]
 }

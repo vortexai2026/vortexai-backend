@@ -1,44 +1,24 @@
-from typing import Dict, List
-from app.database import fetch_all
+from app.database import fetch_all, execute
+from app.ai_activity_log import log_ai_action
 
-"""
-LEVEL 6: Strategy AI
-Reads outcomes + deal history and suggests strategy changes.
-Simple stable version (no OpenAI required).
-"""
-
-DEFAULT_STRATEGY = {
-    "focus_asset_types": ["real_estate", "cars", "businesses"],
-    "min_ai_score": 60,
-    "max_risk": 70,
-}
-
-def strategy_summary() -> Dict:
-    rows = fetch_all("""
-        SELECT outcome, count(*) as cnt
-        FROM outcomes
-        GROUP BY outcome
-        ORDER BY cnt DESC
+def run_strategy():
+    stats = fetch_all("""
+        SELECT asset_type, COUNT(*) as c
+        FROM deals
+        WHERE status='sold'
+        GROUP BY asset_type
     """)
 
-    stats = {r["outcome"]: int(r["cnt"]) for r in rows} if rows else {}
-    wins = sum(stats.get(k, 0) for k in ["sold", "closed", "profit"])
-    losses = sum(stats.get(k, 0) for k in ["failed", "scam", "loss"])
+    for s in stats:
+        if s["c"] > 10:
+            execute("""
+                UPDATE ai_strategy
+                SET priority = priority + 1
+                WHERE asset_type=%s
+            """, (s["asset_type"],))
 
-    strategy = dict(DEFAULT_STRATEGY)
-
-    # if losses high, tighten filters
-    if losses > wins and losses >= 3:
-        strategy["min_ai_score"] = 70
-        strategy["max_risk"] = 60
-
-    # if wins are strong, loosen a little to capture more volume
-    if wins >= 5 and wins > losses:
-        strategy["min_ai_score"] = 55
-
-    return {
-        "stats": stats,
-        "wins": wins,
-        "losses": losses,
-        "strategy": strategy
-    }
+            log_ai_action(
+                level=6,
+                action="STRATEGY_BOOST",
+                reason=f"Increasing focus on {s['asset_type']}"
+            )

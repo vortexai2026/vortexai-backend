@@ -1,6 +1,8 @@
-fastapi
-uvicorn
-psycopg2-binary
-stripe
-reportlab
-pydantic[email]
+fastapi==0.110.0
+uvicorn[standard]==0.27.1
+psycopg2-binary==2.9.9
+stripe==8.4.0
+reportlab==4.2.5
+pydantic[email]==2.6.4
+python-dotenv==1.0.1
+requests==2.31.0

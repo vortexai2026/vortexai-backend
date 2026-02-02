@@ -5,29 +5,29 @@ from app.database import execute
 
 router = APIRouter(prefix="/stripe", tags=["stripe"])
 
+STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
+STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
+
 @router.post("/webhook")
 async def webhook(request: Request):
-    endpoint_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
-    stripe_key = os.getenv("STRIPE_SECRET_KEY")
+    if not STRIPE_SECRET_KEY or not STRIPE_WEBHOOK_SECRET:
+        raise HTTPException(status_code=503, detail="Stripe webhook not configured")
 
-    if not endpoint_secret or not stripe_key:
-        raise HTTPException(status_code=503, detail="Stripe webhook not configured.")
-
-    stripe.api_key = stripe_key
+    stripe.api_key = STRIPE_SECRET_KEY
 
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
 
     try:
-        event = stripe.Webhook.construct_event(payload, sig_header, endpoint_secret)
+        event = stripe.Webhook.construct_event(payload, sig_header, STRIPE_WEBHOOK_SECRET)
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid webhook")
 
-    # Example: subscription activated
-    if event["type"] == "checkout.session.completed":
-        session = event["data"]["object"]
-        buyer_id = session.get("metadata", {}).get("buyer_id")
-        if buyer_id:
-            execute("UPDATE buyers SET tier='paid', plan='pro' WHERE id=%s", (buyer_id,))
+    # Example: subscription paid → upgrade buyer
+    if event["type"] in ("checkout.session.completed", "invoice.paid"):
+        obj = event["data"]["object"]
+        buyer_email = (obj.get("customer_email") or obj.get("metadata", {}).get("buyer_email") or "").lower().strip()
+        if buyer_email:
+            execute("UPDATE buyers SET plan='pro', tier='paid' WHERE email=%s", (buyer_email,))
 
-    return {"received": True}
+    return {"status": "ok"}

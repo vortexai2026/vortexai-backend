@@ -1,13 +1,14 @@
 from pydantic import BaseModel, EmailStr, Field
 from typing import Optional
+from uuid import UUID
 
 class DealCreate(BaseModel):
+    id: UUID
     title: str
-    price: Optional[float] = None
-    location: Optional[str] = None
-    asset_type: Optional[str] = Field(default="real_estate")
-    source: Optional[str] = Field(default="manual")
-    status: Optional[str] = Field(default="new")
+    price: float = 0
+    location: str = ""
+    asset_type: str = ""
+    source: str = ""
 
 class CheckoutRequest(BaseModel):
     email: EmailStr
@@ -15,3 +16,8 @@ class CheckoutRequest(BaseModel):
     location: str = ""
     asset_type: str = "real_estate"
     budget: float = 0
+
+class OutcomeCreate(BaseModel):
+    deal_id: UUID
+    outcome: str = Field(..., description="sold|closed|profit|failed|scam|loss")
+    notes: str = ""

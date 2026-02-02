@@ -1,61 +1,71 @@
-# app/emailer.py
+# app/ai_level4_action.py
 
-import os
-import smtplib
-from email.message import EmailMessage
-from typing import Optional
+from typing import Dict, Any
+from app.emailer import send_email
 
 """
-EMAILER MODULE
-Used by AI Level 4 (Action AI)
+LEVEL 4 — ACTION AI
 
-If email credentials are not set, it will LOG instead of crashing.
+This layer decides WHAT TO DO next with a deal:
+- notify you
+- escalate
+- ignore
+- mark for follow-up
+
+This MUST expose: build_next_action()
 """
 
-SMTP_HOST = os.getenv("SMTP_HOST")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER")
-SMTP_PASS = os.getenv("SMTP_PASS")
-FROM_EMAIL = os.getenv("FROM_EMAIL", SMTP_USER)
 
-
-def send_email(
-    to_email: str,
-    subject: str,
-    body: str,
-    html: Optional[str] = None
-) -> bool:
+def build_next_action(deal: Dict[str, Any], scores: Dict[str, float]) -> Dict[str, Any]:
     """
-    Send an email safely.
-    If SMTP is not configured, it logs instead of crashing the app.
+    Decide the next action based on AI scores.
+    This function is REQUIRED by deals_routes.py
     """
 
-    # 🔒 Safety: do not crash system if email not configured
-    if not SMTP_HOST or not SMTP_USER or not SMTP_PASS:
-        print("⚠️ EMAIL NOT SENT (SMTP not configured)")
-        print("To:", to_email)
-        print("Subject:", subject)
-        print("Body:", body)
-        return False
+    profit = scores.get("profit_score", 0)
+    urgency = scores.get("urgency_score", 0)
+    risk = scores.get("risk_score", 100)
+    ai_score = scores.get("ai_score", 0)
 
-    try:
-        msg = EmailMessage()
-        msg["From"] = FROM_EMAIL
-        msg["To"] = to_email
-        msg["Subject"] = subject
-        msg.set_content(body)
+    action = "ignore"
+    reason = "Low score"
 
-        if html:
-            msg.add_alternative(html, subtype="html")
+    # 🟢 HIGH VALUE DEAL → IMMEDIATE ACTION
+    if profit >= 60 and urgency >= 60 and risk <= 40:
+        action = "notify_now"
+        reason = "High profit & urgency, low risk"
 
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASS)
-            server.send_message(msg)
+        send_email(
+            to_email="youremail@domain.com",  # change later
+            subject="🔥 HOT DEAL FOUND",
+            body=f"""
+HOT DEAL DETECTED
 
-        print(f"✅ Email sent to {to_email}")
-        return True
+Title: {deal.get('title')}
+Price: {deal.get('price')}
+Location: {deal.get('location')}
 
-    except Exception as e:
-        print("❌ Email failed:", str(e))
-        return False
+Profit: {profit}
+Urgency: {urgency}
+Risk: {risk}
+AI Score: {ai_score}
+
+TAKE ACTION NOW.
+"""
+        )
+
+    # 🟡 MEDIUM DEAL → FOLLOW UP
+    elif profit >= 50 and urgency >= 40 and risk <= 50:
+        action = "follow_up"
+        reason = "Decent deal, monitor"
+
+    # 🔴 BAD DEAL → IGNORE
+    else:
+        action = "ignore"
+        reason = "Does not meet thresholds"
+
+    return {
+        "action": action,
+        "reason": reason,
+        "scores": scores
+    }

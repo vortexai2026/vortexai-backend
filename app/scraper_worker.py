@@ -1,42 +1,37 @@
 import json
-import requests
 import uuid
-from datetime import datetime
+import requests
 
 API_URL = "http://localhost:8080/deals/create"
 
-with open("app/sources.json") as f:
-    SOURCES = json.load(f)
+def load_sources():
+    with open("app/data/sources.json", "r") as f:
+        return json.load(f)
 
-def normalize_deal(raw, asset_type):
-    return {
+def post_deal(title, price, location, asset_type, source):
+    deal = {
         "id": str(uuid.uuid4()),
-        "title": raw.get("title", "Unknown"),
-        "price": raw.get("price", 0),
-        "location": raw.get("location", ""),
+        "title": title,
+        "price": price,
+        "location": location,
         "asset_type": asset_type,
-        "source": raw.get("source", "unknown"),
-        "status": "new",
-        "created_at": datetime.utcnow().isoformat()
+        "source": source
     }
+    r = requests.post(API_URL, json=deal, timeout=30)
+    return r.status_code, r.text
 
-def fake_scrape(source):
-    # TEMP placeholder — later replaced with real scraping
-    return [{
-        "title": f"Sample deal from {source['name']}",
-        "price": 50000,
-        "location": "USA",
-        "source": source["name"]
-    }]
-
-def run():
-    for asset_type, sources in SOURCES.items():
-        for source in sources:
-            results = fake_scrape(source)
-
-            for r in results:
-                deal = normalize_deal(r, asset_type)
-                requests.post(API_URL, json=deal)
+def run_once():
+    sources = load_sources()
+    for asset_type, items in sources.items():
+        for s in items:
+            status, text = post_deal(
+                title=f"Sample deal from {s['name']}",
+                price=50000 if asset_type == "real_estate" else 7000,
+                location="Winnipeg, MB" if s.get("country") == "Canada" else "Miami, FL",
+                asset_type=asset_type,
+                source=s["name"]
+            )
+            print("POST", s["name"], status)
 
 if __name__ == "__main__":
-    run()
+    run_once()

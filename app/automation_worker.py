@@ -1,7 +1,7 @@
 import time
+from app.ai_level7_orchestrator import process_once
 
-print("🤖 VortexAI Automation Worker Booting...")
-
-while True:
-    print("🔁 Worker heartbeat OK")
-    time.sleep(30)
+if __name__ == "__main__":
+    while True:
+        process_once()
+        time.sleep(10)

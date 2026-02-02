@@ -1,14 +1,15 @@
-from typing import Dict, Any
+from app.emailer import send_email
 
-def build_next_action(decision: str, deal: Dict[str, Any]) -> str:
-    title = deal.get("title", "")
-    source = deal.get("source", "")
-    location = deal.get("location", "")
+def take_action(deal: dict):
+    subject = f"🔥 HOT DEAL: {deal['title']}"
+    body = f"""
+PRICE: {deal['price']}
+TYPE: {deal['asset_type']}
+LOCATION: {deal.get('location')}
 
-    if decision == "contact_now":
-        return f"CONTACT SELLER: '{title}' from {source} in {location}"
-    if decision == "review":
-        return f"REVIEW DEAL: '{title}' (check comps, confirm details)"
-    if decision == "watch":
-        return f"WATCHLIST: '{title}' (wait for price drop / more info)"
-    return f"REJECT: '{title}' (too risky)"
+AI SCORE: {deal['ai_score']}
+
+CONTACT NOW.
+"""
+
+    send_email(subject, body)

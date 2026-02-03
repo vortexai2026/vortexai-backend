@@ -1,39 +1,35 @@
-# app/ai_level4_action.py
-from typing import Dict, Any
+from typing import Dict
 from app.emailer import send_email
 
-def build_next_action(deal: Dict[str, Any], decision: str) -> Dict[str, Any]:
-    """
-    Creates an action plan. Real messaging automation can be added later.
-    """
-    if decision == "ignore":
-        return {"type": "none"}
 
-    if decision == "review":
-        return {
-            "type": "review",
-            "todo": [
-                "Check listing URL",
-                "Verify price/condition",
-                "Decide if we contact seller"
-            ]
-        }
+def build_next_action(deal: Dict) -> Dict:
+    """
+    LEVEL 4: Action AI
+    Decides what to DO with a deal.
+    """
 
-    if decision == "contact_seller":
-        msg = (
-            f"New HOT deal found\n\n"
-            f"Title: {deal.get('title')}\n"
-            f"Price: {deal.get('price')} {deal.get('currency')}\n"
-            f"Location: {deal.get('location')}\n"
-            f"URL: {deal.get('url')}\n\n"
-            f"Suggested first message:\n"
-            f"Hi! Is this still available? If yes, what’s the best cash price and how soon do you need to sell?"
+    ai_score = deal.get("ai_score", 0)
+
+    if ai_score >= 70:
+        action = "notify"
+        message = f"""
+        <h3>🔥 HOT DEAL FOUND</h3>
+        <p><b>Title:</b> {deal.get('title')}</p>
+        <p><b>Price:</b> {deal.get('price')}</p>
+        <p><b>Location:</b> {deal.get('location')}</p>
+        <p><b>AI Score:</b> {ai_score}</p>
+        """
+
+        send_email(
+            to_email=os.getenv("ALERT_EMAIL", "you@example.com"),
+            subject="🔥 New Hot Deal Detected",
+            html_content=message,
         )
-        send_email("🔥 VortexAI Hot Deal", msg)
-        return {
-            "type": "contact_seller",
-            "message_template": "Hi! Is this still available? If yes, what’s the best cash price and how soon do you need to sell?",
-            "notify": True
-        }
 
-    return {"type": "none"}
+    else:
+        action = "ignore"
+
+    return {
+        "action": action,
+        "ai_score": ai_score,
+    }

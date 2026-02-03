@@ -1,37 +1,80 @@
-from typing import Dict
-from app.config.money_rules import DEAL_TYPES
+# app/ai_level2_scoring.py
+from typing import Dict, Any
+import os
 
-def score_deal(deal: Dict) -> Dict:
-    price = float(deal.get("price", 0))
+MIN_PROFIT = int(os.getenv("MIN_PROFIT", "60"))
+MIN_URGENCY = int(os.getenv("MIN_URGENCY", "60"))
+MAX_RISK = int(os.getenv("MAX_RISK", "40"))
+MIN_AI_SCORE = int(os.getenv("MIN_AI_SCORE", "60"))
+
+def score_deal(deal: Dict[str, Any]) -> Dict[str, float]:
+    price = float(deal.get("price") or 0)
     title = (deal.get("title") or "").lower()
-    asset_type = deal.get("asset_type")
+    location = (deal.get("location") or "").lower()
+    asset_type = (deal.get("asset_type") or "").lower()
 
-    profit = urgency = risk = 0
+    profit = 0
+    urgency = 0
+    risk = 0
 
-    rules = DEAL_TYPES.get(asset_type)
-    if not rules:
-        return {"profit": 0, "urgency": 0, "risk": 100, "ai_score": 0}
+    # PROFIT rules by asset
+    if asset_type == "real_estate":
+        if 30000 <= price <= 200000:
+            profit += 70
+        elif 200000 < price <= 400000:
+            profit += 55
+        else:
+            profit += 35
 
-    if rules["min_price"] <= price <= rules["max_price"]:
-        profit += 60
+    if asset_type in ("cars", "car", "trucks"):
+        if 1000 <= price <= 5000:
+            profit += 75
+        elif 5000 < price <= 12000:
+            profit += 60
+        else:
+            profit += 40
+
+    if asset_type in ("businesses", "business"):
+        if 10000 <= price <= 150000:
+            profit += 65
+        else:
+            profit += 45
+
+    # URGENCY keywords
+    urgent_words = ["must sell", "urgent", "asap", "today", "need gone", "moving", "divorce", "foreclosure", "cash only"]
+    if any(w in title for w in urgent_words):
+        urgency += 70
     else:
-        risk += 40
+        urgency += 35
 
-    if any(k in title for k in rules["keywords"]):
-        urgency += 60
+    # RISK keywords
+    risky_words = ["no title", "salvage", "rebuilt", "as-is", "scam", "no paperwork", "stolen"]
+    if any(w in title for w in risky_words):
+        risk += 70
     else:
-        urgency += 20
+        risk += 25
 
-    if "scam" in title or "no title" in title:
-        risk += 60
-    else:
-        risk += 20
+    # Location boost
+    if any(city in location for city in ["winnipeg", "toronto", "vancouver", "calgary", "edmonton", "miami", "phoenix", "dallas"]):
+        profit += 5
 
-    ai_score = max(0, min(100, profit + urgency - risk))
+    profit = max(0, min(100, profit))
+    urgency = max(0, min(100, urgency))
+    risk = max(0, min(100, risk))
+
+    ai_score = max(0, min(100, (profit * 0.5) + (urgency * 0.4) - (risk * 0.3)))
 
     return {
-        "profit": profit,
-        "urgency": urgency,
-        "risk": risk,
-        "ai_score": ai_score
+        "profit_score": round(profit, 2),
+        "urgency_score": round(urgency, 2),
+        "risk_score": round(risk, 2),
+        "ai_score": round(ai_score, 2),
     }
+
+def passes_money_filter(scores: Dict[str, float]) -> bool:
+    return (
+        scores["profit_score"] >= MIN_PROFIT and
+        scores["urgency_score"] >= MIN_URGENCY and
+        scores["risk_score"] <= MAX_RISK and
+        scores["ai_score"] >= MIN_AI_SCORE
+    )

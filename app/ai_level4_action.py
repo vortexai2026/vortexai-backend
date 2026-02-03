@@ -1,71 +1,39 @@
 # app/ai_level4_action.py
-
 from typing import Dict, Any
 from app.emailer import send_email
 
-"""
-LEVEL 4 — ACTION AI
-
-This layer decides WHAT TO DO next with a deal:
-- notify you
-- escalate
-- ignore
-- mark for follow-up
-
-This MUST expose: build_next_action()
-"""
-
-
-def build_next_action(deal: Dict[str, Any], scores: Dict[str, float]) -> Dict[str, Any]:
+def build_next_action(deal: Dict[str, Any], decision: str) -> Dict[str, Any]:
     """
-    Decide the next action based on AI scores.
-    This function is REQUIRED by deals_routes.py
+    Creates an action plan. Real messaging automation can be added later.
     """
+    if decision == "ignore":
+        return {"type": "none"}
 
-    profit = scores.get("profit_score", 0)
-    urgency = scores.get("urgency_score", 0)
-    risk = scores.get("risk_score", 100)
-    ai_score = scores.get("ai_score", 0)
+    if decision == "review":
+        return {
+            "type": "review",
+            "todo": [
+                "Check listing URL",
+                "Verify price/condition",
+                "Decide if we contact seller"
+            ]
+        }
 
-    action = "ignore"
-    reason = "Low score"
-
-    # 🟢 HIGH VALUE DEAL → IMMEDIATE ACTION
-    if profit >= 60 and urgency >= 60 and risk <= 40:
-        action = "notify_now"
-        reason = "High profit & urgency, low risk"
-
-        send_email(
-            to_email="youremail@domain.com",  # change later
-            subject="🔥 HOT DEAL FOUND",
-            body=f"""
-HOT DEAL DETECTED
-
-Title: {deal.get('title')}
-Price: {deal.get('price')}
-Location: {deal.get('location')}
-
-Profit: {profit}
-Urgency: {urgency}
-Risk: {risk}
-AI Score: {ai_score}
-
-TAKE ACTION NOW.
-"""
+    if decision == "contact_seller":
+        msg = (
+            f"New HOT deal found\n\n"
+            f"Title: {deal.get('title')}\n"
+            f"Price: {deal.get('price')} {deal.get('currency')}\n"
+            f"Location: {deal.get('location')}\n"
+            f"URL: {deal.get('url')}\n\n"
+            f"Suggested first message:\n"
+            f"Hi! Is this still available? If yes, what’s the best cash price and how soon do you need to sell?"
         )
+        send_email("🔥 VortexAI Hot Deal", msg)
+        return {
+            "type": "contact_seller",
+            "message_template": "Hi! Is this still available? If yes, what’s the best cash price and how soon do you need to sell?",
+            "notify": True
+        }
 
-    # 🟡 MEDIUM DEAL → FOLLOW UP
-    elif profit >= 50 and urgency >= 40 and risk <= 50:
-        action = "follow_up"
-        reason = "Decent deal, monitor"
-
-    # 🔴 BAD DEAL → IGNORE
-    else:
-        action = "ignore"
-        reason = "Does not meet thresholds"
-
-    return {
-        "action": action,
-        "reason": reason,
-        "scores": scores
-    }
+    return {"type": "none"}

@@ -1,61 +1,36 @@
-# app/emailer.py
-
 import os
-import smtplib
-from email.message import EmailMessage
-from typing import Optional
+import requests
 
-"""
-EMAILER MODULE
-Used by AI Level 4 (Action AI)
+BREVO_API_KEY = os.getenv("BREVO_API_KEY")
+BREVO_SENDER_EMAIL = os.getenv("BREVO_SENDER_EMAIL", "alerts@yourdomain.com")
 
-If email credentials are not set, it will LOG instead of crashing.
-"""
-
-SMTP_HOST = os.getenv("SMTP_HOST")
-SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER")
-SMTP_PASS = os.getenv("SMTP_PASS")
-FROM_EMAIL = os.getenv("FROM_EMAIL", SMTP_USER)
+if not BREVO_API_KEY:
+    raise RuntimeError("BREVO_API_KEY is not set")
 
 
-def send_email(
-    to_email: str,
-    subject: str,
-    body: str,
-    html: Optional[str] = None
-) -> bool:
+def send_email(to_email: str, subject: str, html_content: str):
     """
-    Send an email safely.
-    If SMTP is not configured, it logs instead of crashing the app.
+    Send email using Brevo (Sendinblue)
     """
 
-    # 🔒 Safety: do not crash system if email not configured
-    if not SMTP_HOST or not SMTP_USER or not SMTP_PASS:
-        print("⚠️ EMAIL NOT SENT (SMTP not configured)")
-        print("To:", to_email)
-        print("Subject:", subject)
-        print("Body:", body)
-        return False
+    url = "https://api.brevo.com/v3/smtp/email"
 
-    try:
-        msg = EmailMessage()
-        msg["From"] = FROM_EMAIL
-        msg["To"] = to_email
-        msg["Subject"] = subject
-        msg.set_content(body)
+    headers = {
+        "accept": "application/json",
+        "api-key": BREVO_API_KEY,
+        "content-type": "application/json",
+    }
 
-        if html:
-            msg.add_alternative(html, subtype="html")
+    payload = {
+        "sender": {"email": BREVO_SENDER_EMAIL},
+        "to": [{"email": to_email}],
+        "subject": subject,
+        "htmlContent": html_content,
+    }
 
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_USER, SMTP_PASS)
-            server.send_message(msg)
+    response = requests.post(url, json=payload, headers=headers)
 
-        print(f"✅ Email sent to {to_email}")
-        return True
+    if response.status_code not in (200, 201):
+        raise Exception(f"Brevo error: {response.text}")
 
-    except Exception as e:
-        print("❌ Email failed:", str(e))
-        return False
+    return True

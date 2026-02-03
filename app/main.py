@@ -1,31 +1,20 @@
+# app/main.py
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-
 from app.deals_routes import router as deals_router
-from app.pdf_routes import router as pdf_router
-from app.stripe_routes import router as stripe_router
-from app.stripe_webhook import router as stripe_webhook_router
-from app.sources_routes import router as sources_router
+from app.ai_level6_strategy import strategy_summary
 
-app = FastAPI(title="VortexAI", version="1.0")
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+app = FastAPI(title="VortexAI Backend", version="1.0")
 
 @app.get("/")
 def root():
-    return {"status": "ok", "service": "VortexAI"}
+    return {"ok": True, "service": "vortexai-backend"}
 
 @app.get("/health")
 def health():
-    return {"status": "healthy"}
+    return {"ok": True}
+
+@app.get("/strategy")
+def strategy():
+    return strategy_summary()
 
 app.include_router(deals_router)
-app.include_router(pdf_router)
-app.include_router(stripe_router)
-app.include_router(stripe_webhook_router)
-app.include_router(sources_router)

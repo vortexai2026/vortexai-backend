@@ -1,42 +1,63 @@
-CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+-- db_schema.sql
 
 CREATE TABLE IF NOT EXISTS deals (
   id UUID PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  source TEXT NOT NULL,
+  external_id TEXT,
+  asset_type TEXT NOT NULL,        -- real_estate, cars, businesses, etc
   title TEXT NOT NULL,
-  price NUMERIC DEFAULT 0,
-  location TEXT DEFAULT '',
-  asset_type TEXT DEFAULT '',
-  source TEXT DEFAULT '',
-  status TEXT DEFAULT 'new',
+  description TEXT,
+  location TEXT,
+  url TEXT,
+  price NUMERIC,
+  currency TEXT DEFAULT 'USD',
+
+  -- AI fields
   profit_score NUMERIC DEFAULT 0,
   urgency_score NUMERIC DEFAULT 0,
   risk_score NUMERIC DEFAULT 0,
   ai_score NUMERIC DEFAULT 0,
-  decision TEXT DEFAULT '',
-  next_action TEXT DEFAULT '',
-  created_at TIMESTAMPTZ DEFAULT now()
+
+  -- decision/action
+  decision TEXT DEFAULT 'ignore',   -- ignore, review, contact_seller, notify_buyers
+  next_action JSONB DEFAULT '{}'::jsonb,
+  status TEXT DEFAULT 'new'         -- new, contacted, negotiating, under_contract, sold, failed
 );
+
+CREATE UNIQUE INDEX IF NOT EXISTS deals_unique_source_external
+ON deals (source, external_id)
+WHERE external_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS buyers (
   id UUID PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
   email TEXT UNIQUE NOT NULL,
-  name TEXT DEFAULT '',
-  location TEXT DEFAULT '',
-  asset_type TEXT DEFAULT '',
-  budget NUMERIC DEFAULT 0,
-  tier TEXT DEFAULT 'free',
-  plan TEXT DEFAULT 'free',
-  created_at TIMESTAMPTZ DEFAULT now()
+  name TEXT,
+  phone TEXT,
+  location TEXT,
+  asset_types TEXT[] DEFAULT ARRAY[]::TEXT[],
+  min_price NUMERIC DEFAULT 0,
+  max_price NUMERIC DEFAULT 999999999,
+  tier TEXT DEFAULT 'free',         -- free, pro, vip
+  plan TEXT DEFAULT 'free'          -- free, pro, vip
 );
 
-CREATE TABLE IF NOT EXISTS outcomes (
+CREATE TABLE IF NOT EXISTS notifications (
   id UUID PRIMARY KEY,
-  deal_id UUID REFERENCES deals(id) ON DELETE CASCADE,
-  outcome TEXT NOT NULL,
-  notes TEXT DEFAULT '',
-  created_at TIMESTAMPTZ DEFAULT now()
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  channel TEXT NOT NULL,            -- email, sms, webhook
+  target TEXT NOT NULL,             -- email address, phone, url
+  subject TEXT,
+  body TEXT,
+  sent BOOLEAN DEFAULT FALSE,
+  error TEXT
 );
 
-CREATE INDEX IF NOT EXISTS idx_deals_asset_type ON deals(asset_type);
-CREATE INDEX IF NOT EXISTS idx_deals_ai_score ON deals(ai_score);
-CREATE INDEX IF NOT EXISTS idx_deals_created_at ON deals(created_at);
+CREATE TABLE IF NOT EXISTS learning_events (
+  id UUID PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  deal_id UUID REFERENCES deals(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,         -- contacted, replied, sold, scam, etc
+  metadata JSONB DEFAULT '{}'::jsonb
+);

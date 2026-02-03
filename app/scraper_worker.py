@@ -1,37 +1,21 @@
-import json
-import uuid
+# worker/sources_adapter.py
+from typing import List, Dict, Any
 import requests
 
-API_URL = "http://localhost:8080/deals/create"
+def collect_deals() -> List[Dict[str, Any]]:
+    """
+    SAFE MODE:
+    - Use RSS feeds
+    - Use partner APIs
+    - Use your own listing feeds
+    - Use manual uploads
+    """
+    deals: List[Dict[str, Any]] = []
 
-def load_sources():
-    with open("app/data/sources.json", "r") as f:
-        return json.load(f)
+    # Example: a "feed" that returns JSON (you can replace this)
+    # resp = requests.get("https://your-safe-feed.com/deals.json", timeout=20)
+    # for d in resp.json():
+    #     deals.append(d)
 
-def post_deal(title, price, location, asset_type, source):
-    deal = {
-        "id": str(uuid.uuid4()),
-        "title": title,
-        "price": price,
-        "location": location,
-        "asset_type": asset_type,
-        "source": source
-    }
-    r = requests.post(API_URL, json=deal, timeout=30)
-    return r.status_code, r.text
-
-def run_once():
-    sources = load_sources()
-    for asset_type, items in sources.items():
-        for s in items:
-            status, text = post_deal(
-                title=f"Sample deal from {s['name']}",
-                price=50000 if asset_type == "real_estate" else 7000,
-                location="Winnipeg, MB" if s.get("country") == "Canada" else "Miami, FL",
-                asset_type=asset_type,
-                source=s["name"]
-            )
-            print("POST", s["name"], status)
-
-if __name__ == "__main__":
-    run_once()
+    # For now: return empty list (won't crash)
+    return deals

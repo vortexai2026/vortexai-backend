@@ -1,13 +1,16 @@
+# app/ai_level6_strategy.py
+from typing import Dict, Any
 from app.database import fetch_all
 
-def weekly_strategy():
-    results = fetch_all("""
-        SELECT asset_type, COUNT(*) 
-        FROM deal_feedback 
-        WHERE outcome='closed'
+def strategy_summary() -> Dict[str, Any]:
+    """
+    Very simple trend summary: what asset types are producing best AI scores.
+    """
+    rows = fetch_all("""
+        SELECT asset_type, COUNT(*) as total, AVG(ai_score) as avg_score
+        FROM deals
+        WHERE created_at > NOW() - INTERVAL '7 days'
         GROUP BY asset_type
+        ORDER BY avg_score DESC
     """)
-
-    return {
-        "focus_more_on": max(results, key=lambda x: x[1])[0] if results else None
-    }
+    return {"last_7_days": rows}

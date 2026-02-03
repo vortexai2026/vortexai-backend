@@ -1,50 +1,12 @@
 # app/ai_level5_learning.py
+from typing import Dict, Any
+from app.database import execute
 
-from typing import Dict
-
-"""
-LEVEL 5 — LEARNING AI
-
-This layer adjusts AI behavior based on REAL outcomes.
-It MUST expose: learn_adjustment()
-"""
-
-
-def learn_adjustment(outcome: str) -> float:
+def learn_adjustment(deal_id: str, decision: str, scores: Dict[str, float]) -> None:
     """
-    Returns a numeric adjustment based on deal outcome.
-    Positive = reward
-    Negative = penalty
+    Logs learning events. Later you can use this to auto-tune thresholds.
     """
-
-    if not outcome:
-        return 0.0
-
-    outcome = outcome.lower().strip()
-
-    # ✅ SUCCESS OUTCOMES
-    if outcome in ("sold", "closed", "profit", "won", "deal_closed"):
-        return 0.10
-
-    # ❌ FAILURE OUTCOMES
-    if outcome in ("failed", "loss", "scam", "bad", "no_response"):
-        return -0.10
-
-    # 😐 NEUTRAL / UNKNOWN
-    return 0.0
-
-
-def apply_learning(scores: Dict[str, float], adjustment: float) -> Dict[str, float]:
-    """
-    Apply learning adjustment to AI score.
-    """
-
-    scores = scores.copy()
-
-    ai_score = scores.get("ai_score", 0)
-    ai_score += ai_score * adjustment
-
-    # Clamp
-    scores["ai_score"] = max(0, min(100, round(ai_score, 2)))
-
-    return scores
+    execute("""
+        INSERT INTO learning_events (id, deal_id, event_type, metadata)
+        VALUES (gen_random_uuid(), %s, %s, %s::jsonb)
+    """, (deal_id, "scored", f'{{"decision":"{decision}","scores":{scores}}}'))

@@ -1,30 +1,29 @@
-# app/services/match_engine.py
 from app.db import db
 
-def match_deal_to_buyers(deal):
-    buyers = db.fetch_all("""
-      SELECT * FROM buyers
-      WHERE is_active = true
-        AND :asset_type = ANY(asset_types)
-        AND :location = ANY(cities)
-        AND :price BETWEEN min_price AND max_price
-      ORDER BY
-        CASE tier
-          WHEN 'vip' THEN 1
-          WHEN 'pro' THEN 2
-          ELSE 3
-        END;
+
+def match_existing_deals_to_buyer(buyer_id):
+    buyer = db.fetch_one(
+        "SELECT * FROM buyers WHERE id = :id",
+        {"id": buyer_id}
+    )
+
+    deals = db.fetch_all("""
+      SELECT * FROM deals
+      WHERE asset_type = ANY(:asset_types)
+        AND location = ANY(:cities)
+        AND price BETWEEN :min_price AND :max_price
     """, {
-        "asset_type": deal["asset_type"],
-        "location": deal["location"],
-        "price": deal["price"]
+        "asset_types": buyer["asset_types"],
+        "cities": buyer["cities"],
+        "min_price": buyer["min_price"],
+        "max_price": buyer["max_price"]
     })
 
-    for buyer in buyers:
+    for deal in deals:
         db.execute("""
           INSERT INTO deal_matches (deal_id,buyer_id,score)
-          VALUES (:deal_id,:buyer_id,90)
+          VALUES (:deal_id,:buyer_id,85)
         """, {
             "deal_id": deal["id"],
-            "buyer_id": buyer["id"]
+            "buyer_id": buyer_id
         })

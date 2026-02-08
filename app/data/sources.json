@@ -1,44 +1,220 @@
 {
   "real_estate": [
-    {"name":"Craigslist RE USA","type":"rss","country":"USA","url":"https://craigslist.org/search/rea?format=rss"},
-    {"name":"Craigslist RE Canada","type":"rss","country":"CANADA","url":"https://craigslist.ca/search/rea?format=rss"},
-    {"name":"Zillow","type":"html","country":"USA","url":"https://www.zillow.com/homes/for_sale/"},
-    {"name":"Realtor","type":"html","country":"USA","url":"https://www.realtor.com/realestateandhomes-search"},
-    {"name":"Redfin","type":"html","country":"USA","url":"https://www.redfin.com"},
-    {"name":"LoopNet","type":"html","country":"USA","url":"https://www.loopnet.com"},
-    {"name":"Auction.com","type":"html","country":"USA","url":"https://www.auction.com"},
-    {"name":"Hubzu","type":"html","country":"USA","url":"https://www.hubzu.com"},
-    {"name":"Foreclosure.com","type":"html","country":"USA","url":"https://www.foreclosure.com"},
-    {"name":"LandWatch","type":"html","country":"USA","url":"https://www.landwatch.com"},
-    {"name":"LandAndFarm","type":"html","country":"USA","url":"https://www.landandfarm.com"},
-    {"name":"Point2Homes","type":"html","country":"GLOBAL","url":"https://www.point2homes.com"},
-    {"name":"Kijiji Real Estate","type":"html","country":"CANADA","url":"https://www.kijiji.ca/b-real-estate"},
-    {"name":"Facebook Marketplace Property","type":"html","country":"GLOBAL","url":"https://www.facebook.com/marketplace/category/propertyforsale"}
+    {
+      "name": "Craigslist RE USA",
+      "category": "real_estate",
+      "lead_type": "seller",
+      "method": "rss",
+      "automation": "safe",
+      "country": "USA",
+      "priority": 1,
+      "url": "https://craigslist.org/search/rea?format=rss"
+    },
+    {
+      "name": "Craigslist RE Canada",
+      "category": "real_estate",
+      "lead_type": "seller",
+      "method": "rss",
+      "automation": "safe",
+      "country": "CANADA",
+      "priority": 1,
+      "url": "https://craigslist.ca/search/rea?format=rss"
+    },
+    {
+      "name": "Zillow FSBO",
+      "category": "real_estate",
+      "lead_type": "seller",
+      "method": "html",
+      "automation": "semi",
+      "country": "USA",
+      "priority": 2,
+      "url": "https://www.zillow.com/homes/for_sale/"
+    },
+    {
+      "name": "Realtor",
+      "category": "real_estate",
+      "lead_type": "seller",
+      "method": "html",
+      "automation": "semi",
+      "country": "USA",
+      "priority": 3,
+      "url": "https://www.realtor.com/realestateandhomes-search"
+    },
+    {
+      "name": "Redfin",
+      "category": "real_estate",
+      "lead_type": "seller",
+      "method": "html",
+      "automation": "semi",
+      "country": "USA",
+      "priority": 3,
+      "url": "https://www.redfin.com"
+    },
+    {
+      "name": "Auction.com",
+      "category": "real_estate",
+      "lead_type": "seller",
+      "method": "html",
+      "automation": "semi",
+      "country": "USA",
+      "priority": 1,
+      "url": "https://www.auction.com"
+    },
+    {
+      "name": "Foreclosure.com",
+      "category": "real_estate",
+      "lead_type": "seller",
+      "method": "html",
+      "automation": "semi",
+      "country": "USA",
+      "priority": 1,
+      "url": "https://www.foreclosure.com"
+    },
+    {
+      "name": "Kijiji Real Estate",
+      "category": "real_estate",
+      "lead_type": "seller",
+      "method": "html",
+      "automation": "semi",
+      "country": "CANADA",
+      "priority": 1,
+      "url": "https://www.kijiji.ca/b-real-estate"
+    },
+    {
+      "name": "Facebook Marketplace Property",
+      "category": "real_estate",
+      "lead_type": "seller",
+      "method": "manual",
+      "automation": "manual_only",
+      "country": "GLOBAL",
+      "priority": 1,
+      "url": "https://www.facebook.com/marketplace/category/propertyforsale"
+    },
+    {
+      "name": "Looking for House Posts",
+      "category": "real_estate",
+      "lead_type": "buyer",
+      "method": "manual",
+      "automation": "manual_only",
+      "country": "GLOBAL",
+      "priority": 1,
+      "url": null
+    }
   ],
 
   "cars": [
-    {"name":"Craigslist Cars","type":"rss","country":"USA","url":"https://craigslist.org/search/cta?format=rss"},
-    {"name":"Facebook Marketplace Cars","type":"html","country":"GLOBAL","url":"https://www.facebook.com/marketplace/category/vehicles"},
-    {"name":"AutoTrader US","type":"html","country":"USA","url":"https://www.autotrader.com"},
-    {"name":"AutoTrader Canada","type":"html","country":"CANADA","url":"https://www.autotrader.ca"},
-    {"name":"Cars.com","type":"html","country":"USA","url":"https://www.cars.com"},
-    {"name":"CarGurus","type":"html","country":"USA","url":"https://www.cargurus.com"},
-    {"name":"Bring a Trailer","type":"html","country":"USA","url":"https://bringatrailer.com"},
-    {"name":"Copart","type":"html","country":"USA","url":"https://www.copart.com"},
-    {"name":"IAAI","type":"html","country":"USA","url":"https://www.iaai.com"},
-    {"name":"Hemmings","type":"html","country":"USA","url":"https://www.hemmings.com"}
+    {
+      "name": "Craigslist Cars",
+      "category": "cars",
+      "lead_type": "seller",
+      "method": "rss",
+      "automation": "safe",
+      "country": "USA",
+      "priority": 1,
+      "url": "https://craigslist.org/search/cta?format=rss"
+    },
+    {
+      "name": "Facebook Marketplace Cars",
+      "category": "cars",
+      "lead_type": "seller",
+      "method": "manual",
+      "automation": "manual_only",
+      "country": "GLOBAL",
+      "priority": 1,
+      "url": "https://www.facebook.com/marketplace/category/vehicles"
+    },
+    {
+      "name": "AutoTrader US",
+      "category": "cars",
+      "lead_type": "seller",
+      "method": "html",
+      "automation": "semi",
+      "country": "USA",
+      "priority": 2,
+      "url": "https://www.autotrader.com"
+    },
+    {
+      "name": "AutoTrader Canada",
+      "category": "cars",
+      "lead_type": "seller",
+      "method": "html",
+      "automation": "semi",
+      "country": "CANADA",
+      "priority": 2,
+      "url": "https://www.autotrader.ca"
+    },
+    {
+      "name": "Looking for Car Posts",
+      "category": "cars",
+      "lead_type": "buyer",
+      "method": "manual",
+      "automation": "manual_only",
+      "country": "GLOBAL",
+      "priority": 1,
+      "url": null
+    }
   ],
 
   "businesses": [
-    {"name":"BizBuySell","type":"html","country":"USA","url":"https://www.bizbuysell.com"},
-    {"name":"BizQuest","type":"html","country":"USA","url":"https://www.bizquest.com"},
-    {"name":"Businesses For Sale","type":"html","country":"GLOBAL","url":"https://www.businessesforsale.com"},
-    {"name":"LoopNet Businesses","type":"html","country":"USA","url":"https://www.loopnet.com/businesses-for-sale"},
-    {"name":"Flippa","type":"html","country":"GLOBAL","url":"https://www.flippa.com"},
-    {"name":"Acquire","type":"html","country":"GLOBAL","url":"https://acquire.com"},
-    {"name":"Empire Flippers","type":"html","country":"GLOBAL","url":"https://empireflippers.com"},
-    {"name":"MicroAcquire","type":"html","country":"GLOBAL","url":"https://microacquire.com"},
-    {"name":"Facebook Wholesale Groups","type":"html","country":"GLOBAL","url":"https://www.facebook.com/groups"},
-    {"name":"GovDeals","type":"html","country":"USA","url":"https://www.govdeals.com"}
+    {
+      "name": "BizBuySell",
+      "category": "businesses",
+      "lead_type": "seller",
+      "method": "html",
+      "automation": "semi",
+      "country": "USA",
+      "priority": 1,
+      "url": "https://www.bizbuysell.com"
+    },
+    {
+      "name": "BizQuest",
+      "category": "businesses",
+      "lead_type": "seller",
+      "method": "html",
+      "automation": "semi",
+      "country": "USA",
+      "priority": 2,
+      "url": "https://www.bizquest.com"
+    },
+    {
+      "name": "Flippa",
+      "category": "businesses",
+      "lead_type": "seller",
+      "method": "html",
+      "automation": "semi",
+      "country": "GLOBAL",
+      "priority": 2,
+      "url": "https://www.flippa.com"
+    },
+    {
+      "name": "Empire Flippers",
+      "category": "businesses",
+      "lead_type": "seller",
+      "method": "html",
+      "automation": "semi",
+      "country": "GLOBAL",
+      "priority": 3,
+      "url": "https://empireflippers.com"
+    },
+    {
+      "name": "Facebook Wholesale Groups",
+      "category": "businesses",
+      "lead_type": "seller",
+      "method": "manual",
+      "automation": "manual_only",
+      "country": "GLOBAL",
+      "priority": 1,
+      "url": "https://www.facebook.com/groups"
+    },
+    {
+      "name": "Looking to Buy Business Posts",
+      "category": "businesses",
+      "lead_type": "buyer",
+      "method": "manual",
+      "automation": "manual_only",
+      "country": "GLOBAL",
+      "priority": 1,
+      "url": null
+    }
   ]
 }

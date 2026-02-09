@@ -1,91 +1,87 @@
 import json
 import time
-import uuid
 import requests
+import uuid
 from pathlib import Path
 
-# ==============================
-# PHASE 1 CONFIG (DO NOT RAISE YET)
-# ==============================
+# =========================
+# CONFIG
+# =========================
 
-API_URL = "http://localhost:8080/deals/create"  # Railway URL later
+API_URL = "https://vortexai-backend-production.up.railway.app/deals/create"
 SOURCES_PATH = Path("data/sources_usa.json")
-
-MAX_DEALS_PER_RUN = 20        # 🔒 PHASE 1 LIMIT
-DELAY_BETWEEN_DEALS = 2       # seconds (safe throttle)
 
 HEADERS = {
     "Content-Type": "application/json"
 }
 
-# ==============================
-# HELPERS
-# ==============================
+DELAY_SECONDS = 2  # throttle (safe)
+
+# =========================
+# LOAD SOURCES
+# =========================
 
 def load_sources():
-    if not SOURCES_PATH.exists():
-        raise FileNotFoundError("sources_usa.json not found")
     with open(SOURCES_PATH, "r", encoding="utf-8") as f:
         return json.load(f)
 
-def build_deal(source_name, asset_type):
+# =========================
+# BUILD DEAL (THIS WAS MISSING)
+# =========================
+
+def build_deal(source_name, asset_type, country):
     return {
         "source": source_name,
         "external_id": str(uuid.uuid4()),
         "asset_type": asset_type,
-        "title": f"{asset_type.title()} deal from {source_name}",
+        "title": f"{asset_type.replace('_', ' ').title()} deal from {source_name}",
         "description": "Auto-ingested by VortexAI worker",
-        "location": "USA",
+        "location": "Winnipeg" if country == "CANADA" else "Texas",
+        "country": country,                     # ✅ REQUIRED
         "url": "https://example.com",
-        "price": 100000,
-        "currency": "USD"
+        "price": 320000,                        # ✅ INTEGER ONLY
+        "currency": "CAD" if country == "CANADA" else "USD"
     }
+
+# =========================
+# SEND DEAL
+# =========================
 
 def send_deal(deal):
     try:
         r = requests.post(API_URL, json=deal, headers=HEADERS, timeout=10)
-        if r.status_code == 200:
-            print(f"✅ SENT | {deal['asset_type']} | {deal['source']}")
-            return True
+        if r.status_code != 200:
+            print("❌ Failed:", r.text)
         else:
-            print(f"❌ FAIL | {r.status_code} | {r.text}")
-            return False
+            print("✅ Sent:", deal["title"], "|", deal["country"])
     except Exception as e:
-        print(f"❌ ERROR | {e}")
-        return False
+        print("❌ Error sending deal:", e)
 
-# ==============================
-# MAIN RUNNER
-# ==============================
+# =========================
+# MAIN WORKER LOOP
+# =========================
 
 def run():
-    print("🚀 VortexAI Scraper Worker — PHASE 1")
     sources = load_sources()
 
-    sent_count = 0
-
-    for asset_type, items in sources.items():
-        for src in items:
-
-            if sent_count >= MAX_DEALS_PER_RUN:
-                print("🛑 Phase-1 limit reached. Stopping.")
-                return
+    for asset_type, source_list in sources.items():
+        for src in source_list:
+            country = src.get("country", "USA")  # default safe
 
             deal = build_deal(
                 source_name=src["name"],
-                asset_type=asset_type
+                asset_type=asset_type,
+                country=country
             )
 
-            if send_deal(deal):
-                sent_count += 1
+            send_deal(deal)
+            time.sleep(DELAY_SECONDS)
 
-            time.sleep(DELAY_BETWEEN_DEALS)
-
-    print(f"✅ DONE | Total deals sent: {sent_count}")
-
-# ==============================
-# ENTRY POINT
-# ==============================
+# =========================
+# ENTRY
+# =========================
 
 if __name__ == "__main__":
+    print("🚀 VortexAI Scraper Worker v1 started")
     run()
+

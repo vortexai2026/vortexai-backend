@@ -1,9 +1,10 @@
 # app/main.py
 from fastapi import FastAPI
 from app.deals_routes import router as deals_router
+from app.outreach_routes import router as outreach_router
 from app.ai_level6_strategy import strategy_summary
 
-# If you have ingest_routes.py inside app/, use this:
+# Optional ingest routes
 try:
     from app.ingest_routes import router as ingest_router
 except Exception:
@@ -23,7 +24,9 @@ def health():
 def strategy():
     return strategy_summary()
 
+# Routers
 app.include_router(deals_router)
+app.include_router(outreach_router)
 
 if ingest_router:
     app.include_router(ingest_router)

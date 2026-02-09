@@ -1,11 +1,16 @@
+# app/database.py
 import os
 import psycopg2
 import psycopg2.extras
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
+if not DATABASE_URL:
+    raise RuntimeError("DATABASE_URL is not set")
+
 def get_conn():
-    return psycopg2.connect(DATABASE_URL)
+    # connect_timeout prevents hanging in Railway
+    return psycopg2.connect(DATABASE_URL, connect_timeout=10)
 
 def fetch_all(query, params=()):
     with get_conn() as conn:
@@ -21,3 +26,4 @@ def execute(query, params=()):
     with get_conn() as conn:
         with conn.cursor() as cur:
             cur.execute(query, params)
+        conn.commit()  # ✅ FORCE COMMIT (prevents “it ran but nothing saved”)

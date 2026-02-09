@@ -1,21 +1,22 @@
 import json
 import time
-import requests
 import uuid
+import requests
 from pathlib import Path
+from datetime import datetime
 
 # =========================
 # CONFIG
 # =========================
 
 API_URL = "https://vortexai-backend-production.up.railway.app/deals/create"
-SOURCES_PATH = Path("data/sources_usa.json")
+SOURCES_PATH = Path("data/sources_usa.json")  # you can add sources_canada.json later
 
 HEADERS = {
     "Content-Type": "application/json"
 }
 
-DELAY_SECONDS = 2  # throttle (safe)
+DELAY_SECONDS = 3  # throttle (safe start)
 
 # =========================
 # LOAD SOURCES
@@ -26,21 +27,22 @@ def load_sources():
         return json.load(f)
 
 # =========================
-# BUILD DEAL (THIS WAS MISSING)
+# BUILD CLEAN DEAL
 # =========================
 
-def build_deal(source_name, asset_type, country):
+def build_deal(source, category):
     return {
-        "source": source_name,
+        "source": source["name"],
         "external_id": str(uuid.uuid4()),
-        "asset_type": asset_type,
-        "title": f"{asset_type.replace('_', ' ').title()} deal from {source_name}",
-        "description": "Auto-ingested by VortexAI worker",
-        "location": "Winnipeg" if country == "CANADA" else "Texas",
-        "country": country,                     # ✅ REQUIRED
-        "url": "https://example.com",
-        "price": 320000,                        # ✅ INTEGER ONLY
-        "currency": "CAD" if country == "CANADA" else "USD"
+        "asset_type": category,                # REQUIRED
+        "title": f"{category.title()} deal from {source['name']}",
+        "description": source.get("description", "Auto-ingested deal"),
+        "location": source.get("location", "USA"),
+        "country": source.get("country", "USA"),
+        "url": source.get("url", "https://example.com"),
+        "price": int(source.get("example_price", 100000)),  # INTEGER ONLY
+        "currency": source.get("currency", "USD"),
+        "created_at": datetime.utcnow().isoformat()
     }
 
 # =========================
@@ -49,39 +51,27 @@ def build_deal(source_name, asset_type, country):
 
 def send_deal(deal):
     try:
-        r = requests.post(API_URL, json=deal, headers=HEADERS, timeout=10)
-        if r.status_code != 200:
-            print("❌ Failed:", r.text)
+        r = requests.post(API_URL, json=deal, headers=HEADERS, timeout=15)
+        if r.status_code == 200:
+            print(f"✅ Sent: {deal['title']} | {deal['price']} {deal['currency']}")
         else:
-            print("✅ Sent:", deal["title"], "|", deal["country"])
+            print(f"❌ Failed ({r.status_code}): {r.text}")
     except Exception as e:
-        print("❌ Error sending deal:", e)
+        print("❌ Error:", e)
 
 # =========================
-# MAIN WORKER LOOP
+# RUN WORKER
 # =========================
 
 def run():
     sources = load_sources()
 
-    for asset_type, source_list in sources.items():
-        for src in source_list:
-            country = src.get("country", "USA")  # default safe
-
-            deal = build_deal(
-                source_name=src["name"],
-                asset_type=asset_type,
-                country=country
-            )
-
+    for category, source_list in sources.items():
+        for source in source_list:
+            deal = build_deal(source, category)
             send_deal(deal)
             time.sleep(DELAY_SECONDS)
 
-# =========================
-# ENTRY
-# =========================
-
 if __name__ == "__main__":
-    print("🚀 VortexAI Scraper Worker v1 started")
+    print("🚀 scraper_worker_v1 started")
     run()
-

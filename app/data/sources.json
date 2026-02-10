@@ -1,220 +1,31 @@
 {
   "real_estate": [
-    {
-      "name": "Craigslist RE USA",
-      "category": "real_estate",
-      "lead_type": "seller",
-      "method": "rss",
-      "automation": "safe",
-      "country": "USA",
-      "priority": 1,
-      "url": "https://craigslist.org/search/rea?format=rss"
-    },
-    {
-      "name": "Craigslist RE Canada",
-      "category": "real_estate",
-      "lead_type": "seller",
-      "method": "rss",
-      "automation": "safe",
-      "country": "CANADA",
-      "priority": 1,
-      "url": "https://craigslist.ca/search/rea?format=rss"
-    },
-    {
-      "name": "Zillow FSBO",
-      "category": "real_estate",
-      "lead_type": "seller",
-      "method": "html",
-      "automation": "semi",
-      "country": "USA",
-      "priority": 2,
-      "url": "https://www.zillow.com/homes/for_sale/"
-    },
-    {
-      "name": "Realtor",
-      "category": "real_estate",
-      "lead_type": "seller",
-      "method": "html",
-      "automation": "semi",
-      "country": "USA",
-      "priority": 3,
-      "url": "https://www.realtor.com/realestateandhomes-search"
-    },
-    {
-      "name": "Redfin",
-      "category": "real_estate",
-      "lead_type": "seller",
-      "method": "html",
-      "automation": "semi",
-      "country": "USA",
-      "priority": 3,
-      "url": "https://www.redfin.com"
-    },
-    {
-      "name": "Auction.com",
-      "category": "real_estate",
-      "lead_type": "seller",
-      "method": "html",
-      "automation": "semi",
-      "country": "USA",
-      "priority": 1,
-      "url": "https://www.auction.com"
-    },
-    {
-      "name": "Foreclosure.com",
-      "category": "real_estate",
-      "lead_type": "seller",
-      "method": "html",
-      "automation": "semi",
-      "country": "USA",
-      "priority": 1,
-      "url": "https://www.foreclosure.com"
-    },
-    {
-      "name": "Kijiji Real Estate",
-      "category": "real_estate",
-      "lead_type": "seller",
-      "method": "html",
-      "automation": "semi",
-      "country": "CANADA",
-      "priority": 1,
-      "url": "https://www.kijiji.ca/b-real-estate"
-    },
-    {
-      "name": "Facebook Marketplace Property",
-      "category": "real_estate",
-      "lead_type": "seller",
-      "method": "manual",
-      "automation": "manual_only",
-      "country": "GLOBAL",
-      "priority": 1,
-      "url": "https://www.facebook.com/marketplace/category/propertyforsale"
-    },
-    {
-      "name": "Looking for House Posts",
-      "category": "real_estate",
-      "lead_type": "buyer",
-      "method": "manual",
-      "automation": "manual_only",
-      "country": "GLOBAL",
-      "priority": 1,
-      "url": null
-    }
+    "Zillow", "Realtor.com", "Redfin", "Trulia", "Homes.com",
+    "Facebook Marketplace", "Craigslist", "Kijiji", "Realtor.ca", "Zoocasa",
+    "HouseSigma", "Point2Homes", "CREA DDF (MLS via broker)", "LoopNet", "Crexi",
+    "LandWatch", "Land And Farm", "Lands of America", "Auction.com", "Hubzu",
+    "Foreclosure.com", "RealtyTrac", "Xome", "Roofstock", "BiggerPockets Marketplace"
   ],
-
   "cars": [
-    {
-      "name": "Craigslist Cars",
-      "category": "cars",
-      "lead_type": "seller",
-      "method": "rss",
-      "automation": "safe",
-      "country": "USA",
-      "priority": 1,
-      "url": "https://craigslist.org/search/cta?format=rss"
-    },
-    {
-      "name": "Facebook Marketplace Cars",
-      "category": "cars",
-      "lead_type": "seller",
-      "method": "manual",
-      "automation": "manual_only",
-      "country": "GLOBAL",
-      "priority": 1,
-      "url": "https://www.facebook.com/marketplace/category/vehicles"
-    },
-    {
-      "name": "AutoTrader US",
-      "category": "cars",
-      "lead_type": "seller",
-      "method": "html",
-      "automation": "semi",
-      "country": "USA",
-      "priority": 2,
-      "url": "https://www.autotrader.com"
-    },
-    {
-      "name": "AutoTrader Canada",
-      "category": "cars",
-      "lead_type": "seller",
-      "method": "html",
-      "automation": "semi",
-      "country": "CANADA",
-      "priority": 2,
-      "url": "https://www.autotrader.ca"
-    },
-    {
-      "name": "Looking for Car Posts",
-      "category": "cars",
-      "lead_type": "buyer",
-      "method": "manual",
-      "automation": "manual_only",
-      "country": "GLOBAL",
-      "priority": 1,
-      "url": null
-    }
+    "AutoTrader", "AutoTrader.ca", "Cars.com", "CarGurus", "Kijiji Autos",
+    "Facebook Marketplace", "Craigslist", "Edmunds", "Kelley Blue Book", "Carfax Listings",
+    "Bring a Trailer", "Cars & Bids", "Autolist", "TrueCar", "CarsDirect",
+    "eBay Motors", "Copart", "IAAI", "Manheim (dealer)", "ACV Auctions (dealer)",
+    "Carvana (pricing)", "Vroom (market data)", "Turo (market signal)"
   ],
-
   "businesses": [
-    {
-      "name": "BizBuySell",
-      "category": "businesses",
-      "lead_type": "seller",
-      "method": "html",
-      "automation": "semi",
-      "country": "USA",
-      "priority": 1,
-      "url": "https://www.bizbuysell.com"
-    },
-    {
-      "name": "BizQuest",
-      "category": "businesses",
-      "lead_type": "seller",
-      "method": "html",
-      "automation": "semi",
-      "country": "USA",
-      "priority": 2,
-      "url": "https://www.bizquest.com"
-    },
-    {
-      "name": "Flippa",
-      "category": "businesses",
-      "lead_type": "seller",
-      "method": "html",
-      "automation": "semi",
-      "country": "GLOBAL",
-      "priority": 2,
-      "url": "https://www.flippa.com"
-    },
-    {
-      "name": "Empire Flippers",
-      "category": "businesses",
-      "lead_type": "seller",
-      "method": "html",
-      "automation": "semi",
-      "country": "GLOBAL",
-      "priority": 3,
-      "url": "https://empireflippers.com"
-    },
-    {
-      "name": "Facebook Wholesale Groups",
-      "category": "businesses",
-      "lead_type": "seller",
-      "method": "manual",
-      "automation": "manual_only",
-      "country": "GLOBAL",
-      "priority": 1,
-      "url": "https://www.facebook.com/groups"
-    },
-    {
-      "name": "Looking to Buy Business Posts",
-      "category": "businesses",
-      "lead_type": "buyer",
-      "method": "manual",
-      "automation": "manual_only",
-      "country": "GLOBAL",
-      "priority": 1,
-      "url": null
-    }
+    "BizBuySell", "BizQuest", "BusinessesForSale", "DealStream", "Axial",
+    "Flippa", "Empire Flippers", "MicroAcquire", "Acquire.com", "FE International",
+    "Quiet Light", "BizBen", "BusinessBroker.net", "MergerNetwork", "LoopNet Businesses"
+  ],
+  "luxury_collectibles": [
+    "Chrono24", "WatchBox", "eBay", "StockX", "GOAT",
+    "Grailed", "The RealReal", "1stDibs", "Sotheby's", "Christie's",
+    "Heritage Auctions", "Goldin", "CollectorSquare", "Rebag", "Fashionphile"
+  ],
+  "equipment": [
+    "Ritchie Bros", "IronPlanet", "MachineryTrader", "Equipment Trader", "MarketBook",
+    "BigIron", "Purple Wave", "Proxibid", "GovDeals", "GSA Auctions",
+    "TruckPaper", "CommercialTruckTrader", "FarmTender", "Fastline", "Machinio"
   ]
 }

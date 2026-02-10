@@ -1,114 +1,68 @@
-# app/outreach_routes.py
+# worker/worker.py
 import os
-from fastapi import APIRouter, HTTPException
-from app.database import fetch_all, fetch_one, execute
-from app.emailer import send_email
+import time
+import requests
 
-router = APIRouter(prefix="/outreach", tags=["outreach"])
-
-DEFAULT_APPROVER = os.getenv("APPROVER_NAME", "owner")
+BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8080")
+RUN_EVERY_MINUTES = int(os.getenv("RUN_EVERY_MINUTES", "15"))
 
 
-@router.get("/pending")
-def list_pending(limit: int = 50):
-    rows = fetch_all(
-        """
-        SELECT om.*, d.title, d.asset_type, d.location, d.url
-        FROM outreach_messages om
-        LEFT JOIN deals d ON d.id = om.deal_id
-        WHERE om.status IN ('draft','approved')
-        ORDER BY om.created_at DESC
-        LIMIT %s
-        """,
-        (limit,),
-    )
-    return {"count": len(rows), "items": rows}
+def collect_deals():
+    """
+    Replace this with real scrapers.
+    For now this returns demo deals so your pipeline proves working.
+    """
+    return [
+        {
+            "source": "demo",
+            "external_id": "demo-001",
+            "asset_type": "cars",
+            "title": "Moving sale - 2012 Honda Civic need gone today",
+            "description": "Runs good, must sell ASAP",
+            "location": "Winnipeg, MB",
+            "url": "https://example.com/car1",
+            "price": 3500,
+            "currency": "CAD",
+        },
+        {
+            "source": "demo",
+            "external_id": "demo-002",
+            "asset_type": "real_estate",
+            "title": "Motivated seller - house needs work - price reduced",
+            "description": "Quick sale, cash preferred",
+            "location": "Winnipeg, MB",
+            "url": "https://example.com/house1",
+            "price": 120000,
+            "currency": "CAD",
+        },
+    ]
 
 
-@router.post("/approve/{message_id}")
-def approve_message(message_id: str, approved_by: str = DEFAULT_APPROVER):
-    msg = fetch_one("SELECT * FROM outreach_messages WHERE id=%s", (message_id,))
-    if not msg:
-        raise HTTPException(status_code=404, detail="Message not found")
-
-    execute(
-        """
-        UPDATE outreach_messages
-        SET status='approved', approved_by=%s, approved_at=NOW()
-        WHERE id=%s
-        """,
-        (approved_by, message_id),
-    )
-    return {"ok": True, "id": message_id, "status": "approved"}
+def push_deal(deal):
+    r = requests.post(f"{BACKEND_URL}/deals/create", json=deal, timeout=30)
+    r.raise_for_status()
+    return r.json()
 
 
-@router.post("/send/{message_id}")
-def send_message(message_id: str):
-    msg = fetch_one("SELECT * FROM outreach_messages WHERE id=%s", (message_id,))
-    if not msg:
-        raise HTTPException(status_code=404, detail="Message not found")
+def run_once():
+    deals = collect_deals()
+    print(f"[worker] collected {len(deals)} deals")
 
-    if msg["status"] not in ("approved", "draft"):
-        raise HTTPException(status_code=400, detail=f"Cannot send status={msg['status']}")
-
-    channel = (msg.get("channel") or "manual").lower()
-    target = (msg.get("target") or "").strip()
-    subject = msg.get("subject") or "VortexAI Outreach"
-    body = msg.get("body") or ""
-
-    try:
-        if channel == "email":
-            if not target:
-                raise RuntimeError("No email target set")
-            send_email(target, subject, body)
-            execute(
-                """
-                UPDATE outreach_messages
-                SET status='sent', sent_at=NOW(), error=NULL
-                WHERE id=%s
-                """,
-                (message_id,),
-            )
-            return {"ok": True, "sent": True, "channel": "email"}
-
-        # manual mode = copy/paste
-        execute(
-            """
-            UPDATE outreach_messages
-            SET status='approved', error=NULL
-            WHERE id=%s
-            """,
-            (message_id,),
-        )
-        return {
-            "ok": True,
-            "sent": False,
-            "channel": "manual",
-            "instructions": "Copy body and paste into Facebook/Kijiji chat manually.",
-            "body": body,
-        }
-
-    except Exception as e:
-        execute(
-            """
-            UPDATE outreach_messages
-            SET status='failed', error=%s
-            WHERE id=%s
-            """,
-            (str(e), message_id),
-        )
-        raise HTTPException(status_code=500, detail=str(e))
+    for d in deals:
+        try:
+            res = push_deal(d)
+            print("[worker] pushed:", res.get("id"), res.get("decision"), res.get("scores"))
+        except Exception as e:
+            print("[worker] error pushing deal:", str(e))
 
 
-@router.post("/skip/{message_id}")
-def skip_message(message_id: str):
-    execute("UPDATE outreach_messages SET status='skipped' WHERE id=%s", (message_id,))
-    return {"ok": True, "id": message_id, "status": "skipped"}
+def main():
+    while True:
+        run_once()
+        sleep_seconds = RUN_EVERY_MINUTES * 60
+        print(f"[worker] sleeping {RUN_EVERY_MINUTES} minutes...")
+        time.sleep(sleep_seconds)
 
 
-@router.get("/{message_id}")
-def get_message(message_id: str):
-    msg = fetch_one("SELECT * FROM outreach_messages WHERE id=%s", (message_id,))
-    if not msg:
-        raise HTTPException(status_code=404, detail="Message not found")
-    return msg
+if __name__ == "__main__":
+    main()

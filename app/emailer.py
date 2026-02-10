@@ -1,36 +1,31 @@
+# app/emailer.py
 import os
-import requests
+import smtplib
+from email.message import EmailMessage
 
-BREVO_API_KEY = os.getenv("BREVO_API_KEY")
-BREVO_SENDER_EMAIL = os.getenv("BREVO_SENDER_EMAIL", "alerts@yourdomain.com")
+SMTP_HOST = os.getenv("SMTP_HOST", "")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASS = os.getenv("SMTP_PASS", "")
+SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER)
 
-if not BREVO_API_KEY:
-    raise RuntimeError("BREVO_API_KEY is not set")
 
-
-def send_email(to_email: str, subject: str, html_content: str):
+def send_email(to_email: str, subject: str, body: str) -> None:
     """
-    Send email using Brevo (Sendinblue)
+    SMTP email sender (SendGrid SMTP works)
+    Env needed:
+      SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
     """
+    if not (SMTP_HOST and SMTP_USER and SMTP_PASS and SMTP_FROM):
+        raise RuntimeError("SMTP env vars not set")
 
-    url = "https://api.brevo.com/v3/smtp/email"
+    msg = EmailMessage()
+    msg["From"] = SMTP_FROM
+    msg["To"] = to_email
+    msg["Subject"] = subject
+    msg.set_content(body)
 
-    headers = {
-        "accept": "application/json",
-        "api-key": BREVO_API_KEY,
-        "content-type": "application/json",
-    }
-
-    payload = {
-        "sender": {"email": BREVO_SENDER_EMAIL},
-        "to": [{"email": to_email}],
-        "subject": subject,
-        "htmlContent": html_content,
-    }
-
-    response = requests.post(url, json=payload, headers=headers)
-
-    if response.status_code not in (200, 201):
-        raise Exception(f"Brevo error: {response.text}")
-
-    return True
+    with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+        server.starttls()
+        server.login(SMTP_USER, SMTP_PASS)
+        server.send_message(msg)

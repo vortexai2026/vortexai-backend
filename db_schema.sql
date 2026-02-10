@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS deals (
   created_at TIMESTAMPTZ DEFAULT NOW(),
   source TEXT NOT NULL,
   external_id TEXT,
-  asset_type TEXT NOT NULL,        -- real_estate, cars, businesses, etc
+  asset_type TEXT NOT NULL,
   title TEXT NOT NULL,
   description TEXT,
   location TEXT,
@@ -13,16 +13,14 @@ CREATE TABLE IF NOT EXISTS deals (
   price NUMERIC,
   currency TEXT DEFAULT 'USD',
 
-  -- AI fields
   profit_score NUMERIC DEFAULT 0,
   urgency_score NUMERIC DEFAULT 0,
   risk_score NUMERIC DEFAULT 0,
   ai_score NUMERIC DEFAULT 0,
 
-  -- decision/action
-  decision TEXT DEFAULT 'ignore',   -- ignore, review, contact_seller, notify_buyers
+  decision TEXT DEFAULT 'ignore',
   next_action JSONB DEFAULT '{}'::jsonb,
-  status TEXT DEFAULT 'new'         -- new, contacted, negotiating, under_contract, sold, failed
+  status TEXT DEFAULT 'new'
 );
 
 CREATE UNIQUE INDEX IF NOT EXISTS deals_unique_source_external
@@ -39,15 +37,15 @@ CREATE TABLE IF NOT EXISTS buyers (
   asset_types TEXT[] DEFAULT ARRAY[]::TEXT[],
   min_price NUMERIC DEFAULT 0,
   max_price NUMERIC DEFAULT 999999999,
-  tier TEXT DEFAULT 'free',         -- free, pro, vip
-  plan TEXT DEFAULT 'free'          -- free, pro, vip
+  tier TEXT DEFAULT 'free',
+  plan TEXT DEFAULT 'free'
 );
 
 CREATE TABLE IF NOT EXISTS notifications (
   id UUID PRIMARY KEY,
   created_at TIMESTAMPTZ DEFAULT NOW(),
-  channel TEXT NOT NULL,            -- email, sms, webhook
-  target TEXT NOT NULL,             -- email address, phone, url
+  channel TEXT NOT NULL,
+  target TEXT NOT NULL,
   subject TEXT,
   body TEXT,
   sent BOOLEAN DEFAULT FALSE,
@@ -58,6 +56,6 @@ CREATE TABLE IF NOT EXISTS learning_events (
   id UUID PRIMARY KEY,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   deal_id UUID REFERENCES deals(id) ON DELETE CASCADE,
-  event_type TEXT NOT NULL,         -- contacted, replied, sold, scam, etc
+  event_type TEXT NOT NULL,
   metadata JSONB DEFAULT '{}'::jsonb
 );

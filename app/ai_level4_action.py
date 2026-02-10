@@ -1,49 +1,68 @@
 # app/ai_level4_action.py
+
 from typing import Dict, Any
 
 
 def build_next_action(deal: Dict[str, Any], decision: str) -> Dict[str, Any]:
     """
-    LEVEL 4: Action Builder (NO auto-messaging here)
-    This returns structured actions your UI/worker can use.
+    LEVEL 4 — ACTION PLANNER
+
+    This function does NOT send messages.
+    It only decides WHAT should happen next.
+    Safe + controllable.
+
+    Decisions supported:
+    - contact_seller
+    - review
+    - ignore
     """
 
     asset_type = (deal.get("asset_type") or "").lower()
-    url = deal.get("url") or ""
-    title = deal.get("title") or ""
-    location = deal.get("location") or ""
-    price = deal.get("price")
+    price = deal.get("price") or 0
+    location = (deal.get("location") or "").lower()
 
-    if decision == "ignore":
-        return {
-            "type": "ignore",
-            "reason": "Not enough profit/urgency or too risky",
-        }
-
-    if decision == "review":
-        return {
-            "type": "review",
-            "todo": [
-                "Open link and verify listing is real",
-                "Check comps quickly",
-                "Decide if you want to contact seller",
-            ],
-            "deal": {"title": title, "location": location, "price": price, "url": url},
-        }
-
+    # -------------------------
+    # HIGH PRIORITY — CONTACT
+    # -------------------------
     if decision == "contact_seller":
         return {
-            "type": "contact_seller",
-            "channel": "manual",
-            "instructions": "Use Outreach Draft (copy/paste) to contact seller safely.",
-            "deal": {"title": title, "location": location, "price": price, "url": url, "asset_type": asset_type},
+            "priority": "high",
+            "action": "draft_outreach",
+            "reason": "High profit + high urgency + acceptable risk",
+            "recommended_channel": "manual",  # Facebook / Kijiji safe
+            "next_steps": [
+                "Generate outreach message",
+                "Ask seller key questions",
+                "Confirm availability",
+                "Push to buyer matching if seller responds"
+            ],
+            "notes": f"Target asset_type={asset_type}, price={price}, location={location}"
         }
 
-    if decision == "notify_buyers":
+    # -------------------------
+    # MEDIUM PRIORITY — REVIEW
+    # -------------------------
+    if decision == "review":
         return {
-            "type": "notify_buyers",
-            "instructions": "Send to matching buyers (when buyer system is added).",
-            "deal": {"title": title, "location": location, "price": price, "url": url, "asset_type": asset_type},
+            "priority": "medium",
+            "action": "manual_review",
+            "reason": "Borderline deal — needs human confirmation",
+            "next_steps": [
+                "Check comps",
+                "Verify seller story",
+                "Confirm ownership / title",
+                "Decide contact or ignore"
+            ],
+            "notes": f"Review asset_type={asset_type}, price={price}"
         }
 
-    return {"type": "unknown", "decision": decision}
+    # -------------------------
+    # LOW PRIORITY — IGNORE
+    # -------------------------
+    return {
+        "priority": "low",
+        "action": "ignore",
+        "reason": "Low profit or high risk",
+        "next_steps": [],
+        "notes": "No further action required"
+    }

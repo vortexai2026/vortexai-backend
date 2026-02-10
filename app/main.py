@@ -1,8 +1,9 @@
 from fastapi import FastAPI
-from app.deals_routes import router as deals_router
-from app.outreach_routes import router as outreach_router
-from app.sources_routes import router as sources_router
-from app.contracts_routes import router as contracts_router
+
+from deals_routes import router as deals_router
+from outreach_routes import router as outreach_router
+from sources_routes import router as sources_router
+from contracts_routes import router as contracts_router
 
 app = FastAPI(title="VortexAI Backend", version="1.0")
 

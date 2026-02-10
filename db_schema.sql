@@ -1,5 +1,3 @@
--- db_schema.sql
-
 CREATE TABLE IF NOT EXISTS deals (
   id UUID PRIMARY KEY,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -27,6 +25,14 @@ CREATE UNIQUE INDEX IF NOT EXISTS deals_unique_source_external
 ON deals (source, external_id)
 WHERE external_id IS NOT NULL;
 
+CREATE TABLE IF NOT EXISTS learning_events (
+  id UUID PRIMARY KEY,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  deal_id UUID REFERENCES deals(id) ON DELETE CASCADE,
+  event_type TEXT NOT NULL,
+  metadata JSONB DEFAULT '{}'::jsonb
+);
+
 CREATE TABLE IF NOT EXISTS buyers (
   id UUID PRIMARY KEY,
   created_at TIMESTAMPTZ DEFAULT NOW(),
@@ -50,12 +56,4 @@ CREATE TABLE IF NOT EXISTS notifications (
   body TEXT,
   sent BOOLEAN DEFAULT FALSE,
   error TEXT
-);
-
-CREATE TABLE IF NOT EXISTS learning_events (
-  id UUID PRIMARY KEY,
-  created_at TIMESTAMPTZ DEFAULT NOW(),
-  deal_id UUID REFERENCES deals(id) ON DELETE CASCADE,
-  event_type TEXT NOT NULL,
-  metadata JSONB DEFAULT '{}'::jsonb
 );

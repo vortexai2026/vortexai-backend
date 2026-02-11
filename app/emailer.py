@@ -1,4 +1,3 @@
-# app/emailer.py
 import os
 import smtplib
 from email.message import EmailMessage
@@ -11,13 +10,8 @@ SMTP_FROM = os.getenv("SMTP_FROM", SMTP_USER)
 
 
 def send_email(to_email: str, subject: str, body: str) -> None:
-    """
-    SMTP email sender (SendGrid SMTP works)
-    Env needed:
-      SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS, SMTP_FROM
-    """
     if not (SMTP_HOST and SMTP_USER and SMTP_PASS and SMTP_FROM):
-        raise RuntimeError("SMTP env vars not set")
+        raise RuntimeError("SMTP env vars missing: SMTP_HOST/SMTP_USER/SMTP_PASS/SMTP_FROM")
 
     msg = EmailMessage()
     msg["From"] = SMTP_FROM

@@ -2,7 +2,7 @@ import uuid
 from fastapi import APIRouter, HTTPException
 
 from app.database import execute, fetch_all, fetch_one
-from app.ai_buyer_matcher import match_buyers_to_deal
+from app.ai.ai_buyer_matcher import match_buyers_to_deal   # ← FIXED IMPORT
 
 router = APIRouter(prefix="/deals", tags=["deals"])
 

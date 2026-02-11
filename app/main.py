@@ -1,9 +1,7 @@
 from fastapi import FastAPI
-
 from app.deals_routes import router as deals_router
 from app.outreach_routes import router as outreach_router
-from app.sources_routes import router as sources_router
-from app.contracts_routes import router as contracts_router
+from app.buyers_routes import router as buyers_router
 
 app = FastAPI(title="VortexAI Backend", version="1.0")
 
@@ -17,5 +15,4 @@ def health():
 
 app.include_router(deals_router)
 app.include_router(outreach_router)
-app.include_router(sources_router)
-app.include_router(contracts_router)
+app.include_router(buyers_router)

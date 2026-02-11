@@ -2,7 +2,7 @@ import uuid
 from fastapi import APIRouter, HTTPException
 
 from app.database import execute, fetch_all, fetch_one
-from app.matcher import match_buyers_for_deal
+from app.ai_buyer_matcher import match_buyers_to_deal
 
 router = APIRouter(prefix="/deals", tags=["deals"])
 
@@ -50,8 +50,8 @@ def create_deal(payload: dict):
         if not deal:
             raise Exception("Deal insert failed")
 
-        # 3️⃣ Auto-match buyers
-        matches = match_buyers_for_deal(deal)
+        # 3️⃣ Auto-match buyers using REAL engine
+        matches = match_buyers_to_deal(deal)
 
         # 4️⃣ Return result
         return {

@@ -4,7 +4,6 @@ from pydantic import BaseModel
 from typing import Optional
 from datetime import date
 import base64
-import pdfkit  # wkhtmltopdf must be installed in your image
 import os
 import tempfile
 

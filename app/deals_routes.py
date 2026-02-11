@@ -8,14 +8,19 @@ from app.ai_level2_scoring import score_deal
 from app.ai_level3_decision import decide_action
 from app.ai_level4_action import build_next_action
 from app.ai_level5_learning import learn_adjustment
+
 from app.ai_outreach_writer import build_outreach_message
+from app.ai_buyer_matcher import match_buyers_to_deal
+from app.buyer_notifier import notify_buyers_for_deal
 
 router = APIRouter(prefix="/deals", tags=["deals"])
+
 
 @router.get("")
 def list_deals(limit: int = 50):
     rows = fetch_all("SELECT * FROM deals ORDER BY created_at DESC LIMIT %s", (limit,))
     return {"count": len(rows), "deals": rows}
+
 
 @router.post("/create")
 def create_deal(payload: DealCreate):
@@ -23,12 +28,13 @@ def create_deal(payload: DealCreate):
         deal_id = str(uuid.uuid4())
         deal = payload.model_dump()
 
+        # AI pipeline
         scores = score_deal(deal)
         decision = decide_action(deal, scores)
         next_action = build_next_action(deal, decision)
         next_action_json = json.dumps(next_action, default=str)
 
-        # Upsert if external_id exists
+        # Optional upsert by (source, external_id)
         if deal.get("external_id"):
             existing = fetch_one(
                 "SELECT id FROM deals WHERE source=%s AND external_id=%s LIMIT 1",
@@ -40,17 +46,24 @@ def create_deal(payload: DealCreate):
                     UPDATE deals SET
                       asset_type=%s, title=%s, description=%s, location=%s, url=%s, price=%s, currency=%s,
                       profit_score=%s, urgency_score=%s, risk_score=%s, ai_score=%s,
-                      decision=%s, next_action=%s::jsonb
+                      decision=%s, next_action=%s::jsonb, status='new'
                     WHERE id=%s
                 """, (
-                    deal["asset_type"], deal["title"], deal.get("description",""), deal.get("location",""),
-                    deal.get("url",""), deal.get("price"), deal.get("currency","USD"),
-                    scores["profit_score"], scores["urgency_score"], scores["risk_score"], scores["ai_score"],
-                    decision, next_action_json, deal_id
+                    deal["asset_type"], deal["title"], deal.get("description"),
+                    deal.get("location"), deal.get("url"), deal.get("price"),
+                    deal.get("currency", "USD"),
+                    scores.get("profit_score", 0),
+                    scores.get("urgency_score", 0),
+                    scores.get("risk_score", 0),
+                    scores.get("ai_score", 0),
+                    decision,
+                    next_action_json,
+                    deal_id
                 ))
 
                 learn_adjustment(deal_id, decision, scores)
 
+                # Outreach draft for green deals
                 if decision in ("contact_seller", "review"):
                     draft = build_outreach_message(deal, decision)
                     execute("""
@@ -58,7 +71,25 @@ def create_deal(payload: DealCreate):
                         VALUES (%s,%s,'manual',NULL,%s,%s,'draft')
                     """, (str(uuid.uuid4()), deal_id, draft["subject"], draft["body"]))
 
-                return {"ok": True, "id": deal_id, "decision": decision, "scores": scores, "next_action": next_action}
+                # Buyer match + notify
+                matched = match_buyers_to_deal({
+                    "id": deal_id,
+                    "asset_type": deal["asset_type"],
+                    "price": deal.get("price"),
+                    "location": deal.get("location"),
+                    "title": deal.get("title"),
+                    "url": deal.get("url"),
+                })
+                if matched:
+                    notify_buyers_for_deal({
+                        "id": deal_id,
+                        "title": deal.get("title"),
+                        "price": deal.get("price"),
+                        "location": deal.get("location"),
+                        "url": deal.get("url"),
+                    })
+
+                return {"ok": True, "id": deal_id, "decision": decision, "scores": scores}
 
         # Insert new deal
         execute("""
@@ -75,11 +106,11 @@ def create_deal(payload: DealCreate):
             deal.get("external_id"),
             deal["asset_type"],
             deal["title"],
-            deal.get("description",""),
-            deal.get("location",""),
-            deal.get("url",""),
+            deal.get("description"),
+            deal.get("location"),
+            deal.get("url"),
             deal.get("price"),
-            deal.get("currency","USD"),
+            deal.get("currency", "USD"),
             scores.get("profit_score", 0),
             scores.get("urgency_score", 0),
             scores.get("risk_score", 0),
@@ -91,6 +122,7 @@ def create_deal(payload: DealCreate):
 
         learn_adjustment(deal_id, decision, scores)
 
+        # Outreach draft
         if decision in ("contact_seller", "review"):
             draft = build_outreach_message(deal, decision)
             execute("""
@@ -98,10 +130,29 @@ def create_deal(payload: DealCreate):
                 VALUES (%s,%s,'manual',NULL,%s,%s,'draft')
             """, (str(uuid.uuid4()), deal_id, draft["subject"], draft["body"]))
 
-        return {"ok": True, "id": deal_id, "decision": decision, "scores": scores, "next_action": next_action}
+        # Buyer match + notify
+        matched = match_buyers_to_deal({
+            "id": deal_id,
+            "asset_type": deal["asset_type"],
+            "price": deal.get("price"),
+            "location": deal.get("location"),
+            "title": deal.get("title"),
+            "url": deal.get("url"),
+        })
+        if matched:
+            notify_buyers_for_deal({
+                "id": deal_id,
+                "title": deal.get("title"),
+                "price": deal.get("price"),
+                "location": deal.get("location"),
+                "url": deal.get("url"),
+            })
+
+        return {"ok": True, "id": deal_id, "decision": decision, "scores": scores}
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Create deal failed: {str(e)}")
+
 
 @router.post("/learn")
 def learn(payload: LearningEvent):
@@ -109,7 +160,12 @@ def learn(payload: LearningEvent):
         execute("""
             INSERT INTO learning_events (id, deal_id, event_type, metadata)
             VALUES (%s,%s,%s,%s::jsonb)
-        """, (str(uuid.uuid4()), payload.deal_id, payload.event_type, json.dumps(payload.metadata or {})))
+        """, (
+            str(uuid.uuid4()),
+            payload.deal_id,
+            payload.event_type,
+            json.dumps(payload.metadata or {})
+        ))
         return {"ok": True}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Learn failed: {str(e)}")

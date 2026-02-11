@@ -31,3 +31,11 @@ class BuyerCreate(BaseModel):
     max_price: Optional[float] = 999999999
 
     tier: Optional[str] = "free"
+
+
+class CheckoutRequest(BaseModel):
+    email: str
+    name: Optional[str] = None
+    location: Optional[str] = None
+    asset_type: str
+    budget: float

@@ -3,6 +3,7 @@ import uuid
 import stripe
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import JSONResponse
+
 from app.database import fetch_one, execute
 from app.models import CheckoutRequest
 
@@ -12,16 +13,20 @@ STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
 STRIPE_PRICE_ID = os.getenv("STRIPE_PRICE_ID")
 APP_URL = os.getenv("APP_URL", "http://localhost:8080")
 
+
 def stripe_ready():
     return bool(STRIPE_SECRET_KEY and STRIPE_PRICE_ID)
+
 
 @router.post("/checkout")
 def checkout(payload: CheckoutRequest):
     if not stripe_ready():
-        raise HTTPException(status_code=503, detail="Stripe not configured (set STRIPE_SECRET_KEY + STRIPE_PRICE_ID)")
+        raise HTTPException(
+            status_code=503,
+            detail="Stripe not configured (set STRIPE_SECRET_KEY + STRIPE_PRICE_ID)"
+        )
 
     stripe.api_key = STRIPE_SECRET_KEY
-
     email = payload.email.strip().lower()
 
     buyer = fetch_one("SELECT id FROM buyers WHERE email=%s LIMIT 1", (email,))
@@ -30,7 +35,14 @@ def checkout(payload: CheckoutRequest):
         execute("""
             INSERT INTO buyers (id, email, name, location, asset_type, budget, tier, plan)
             VALUES (%s,%s,%s,%s,%s,%s,'free','free')
-        """, (buyer_id, email, payload.name, payload.location, payload.asset_type, payload.budget))
+        """, (
+            buyer_id,
+            email,
+            payload.name,
+            payload.location,
+            payload.asset_type,
+            payload.budget
+        ))
     else:
         buyer_id = str(buyer["id"])
 
@@ -47,4 +59,7 @@ def checkout(payload: CheckoutRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-    return JSONResponse(content={"checkout_url": session.url, "buyer_id": buyer_id})
+    return JSONResponse(content={
+        "checkout_url": session.url,
+        "buyer_id": buyer_id
+    })

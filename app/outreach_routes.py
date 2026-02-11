@@ -4,7 +4,9 @@ from app.database import fetch_all, fetch_one, execute
 from app.emailer import send_email
 
 router = APIRouter(prefix="/outreach", tags=["outreach"])
+
 DEFAULT_APPROVER = os.getenv("APPROVER_NAME", "owner")
+
 
 @router.get("/pending")
 def list_pending(limit: int = 50):
@@ -17,6 +19,7 @@ def list_pending(limit: int = 50):
         LIMIT %s
     """, (limit,))
     return {"count": len(rows), "items": rows}
+
 
 @router.post("/approve/{message_id}")
 def approve_message(message_id: str, approved_by: str = DEFAULT_APPROVER):
@@ -31,6 +34,7 @@ def approve_message(message_id: str, approved_by: str = DEFAULT_APPROVER):
     """, (approved_by, message_id))
     return {"ok": True, "id": message_id, "status": "approved"}
 
+
 @router.post("/send/{message_id}")
 def send_message(message_id: str):
     msg = fetch_one("SELECT * FROM outreach_messages WHERE id=%s", (message_id,))
@@ -40,8 +44,8 @@ def send_message(message_id: str):
     if msg["status"] not in ("approved", "draft"):
         raise HTTPException(status_code=400, detail=f"Cannot send status={msg['status']}")
 
-    channel = (msg["channel"] or "manual").lower()
-    target = (msg["target"] or "").strip()
+    channel = (msg.get("channel") or "manual").lower()
+    target = (msg.get("target") or "").strip()
     subject = msg.get("subject") or "VortexAI Outreach"
     body = msg["body"]
 
@@ -50,15 +54,31 @@ def send_message(message_id: str):
             if not target:
                 raise RuntimeError("No email target set")
             send_email(target, subject, body)
-            execute("UPDATE outreach_messages SET status='sent', sent_at=NOW(), error=NULL WHERE id=%s", (message_id,))
-            return {"ok": True, "id": message_id, "sent": True, "channel": "email"}
 
-        execute("UPDATE outreach_messages SET status='approved', error=NULL WHERE id=%s", (message_id,))
-        return {"ok": True, "id": message_id, "sent": False, "channel": "manual", "instructions": "Copy the message body and paste into Facebook/Kijiji chat manually."}
+            execute("""
+                UPDATE outreach_messages
+                SET status='sent', sent_at=NOW(), error=NULL
+                WHERE id=%s
+            """, (message_id,))
+            return {"ok": True, "sent": True, "channel": "email"}
+
+        # manual (safe): copy/paste
+        execute("""
+            UPDATE outreach_messages
+            SET status='approved', error=NULL
+            WHERE id=%s
+        """, (message_id,))
+        return {
+            "ok": True,
+            "sent": False,
+            "channel": "manual",
+            "instructions": "Copy the body and paste into Facebook/Kijiji manually."
+        }
 
     except Exception as e:
         execute("UPDATE outreach_messages SET status='failed', error=%s WHERE id=%s", (str(e), message_id))
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @router.post("/skip/{message_id}")
 def skip_message(message_id: str):

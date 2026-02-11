@@ -1,9 +1,11 @@
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import Response
+
 from app.database import fetch_one
-from app.pdf_generator import generate_pdf
+from app.services.pdf_generator import generate_pdf
 
 router = APIRouter(prefix="/pdf", tags=["pdf"])
+
 
 @router.post("/generate/{deal_id}")
 def generate_pdf_for_deal(deal_id: str):

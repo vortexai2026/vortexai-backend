@@ -1,14 +1,14 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Import your route modules
-from app.routes import deals_routes
-from app.routes import buyers_routes
-from app.routes import outreach_routes
-from app.routes import contracts_routes
-from app.routes import sources_routes
-from app.routes import pdf_routes
-from app.routes import stripe_routes
+# Import your route modules directly from app/
+from app import deals_routes
+from app import buyers_routes
+from app import outreach_routes
+from app import contracts_routes
+from app import sources_routes
+from app import pdf_routes
+from app import stripe_routes
 
 app = FastAPI(title="VortexAI Backend")
 

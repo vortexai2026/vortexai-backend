@@ -1,12 +1,13 @@
-from fastapi import APIRouter
-from app.ai_universal_ingest import ingest_post
+from fastapi import APIRouter, HTTPException
+from app.services.ingest import ingest_source
 
-router = APIRouter(prefix="/ingest", tags=["Ingest"])
+router = APIRouter(prefix="/ingest", tags=["ingest"])
 
-@router.post("/")
-def ingest(payload: dict):
-    return ingest_post(
-        source_name=payload["source"],
-        category=payload["category"],
-        raw_text=payload["text"]
-    )
+
+@router.post("/{source_name}")
+def ingest(source_name: str):
+    try:
+        count = ingest_source(source_name)
+        return {"ok": True, "source": source_name, "ingested": count}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Ingestion failed: {str(e)}")

@@ -1,19 +1,15 @@
-import os
+importimport os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 
-if DATABASE_URL is None:
-    raise Exception("❌ DATABASE_URL is missing in Railway environment variables.")
+if not DATABASE_URL:
+    raise Exception("❌ DATABASE_URL is missing in Railway Variables")
 
-# IMPORTANT: Must be async format
-# If your URL starts with postgres:// change it to postgresql+asyncpg://
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://")
-
-if DATABASE_URL.startswith("postgresql://"):
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+# Fix Supabase / Railway URL format
+DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://")
+DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
 
 engine = create_async_engine(DATABASE_URL, echo=True)
 

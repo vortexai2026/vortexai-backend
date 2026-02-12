@@ -1,29 +1,22 @@
-# app/db.py
-import asyncio
-import asyncpg
+import databases
+import sqlalchemy
+import os
 
-DATABASE_URL = "postgresql://username:password@localhost:5432/vortexai"
+# Load env variables if you want
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql://postgres:postgres@db:5432/vortexai"
+)
 
-class Database:
-    def __init__(self):
-        self.pool = None
+# Database connection
+database = databases.Database(DATABASE_URL)
+metadata = sqlalchemy.MetaData()
 
-    async def connect(self):
-        self.pool = await asyncpg.create_pool(DATABASE_URL)
-
-    async def disconnect(self):
-        await self.pool.close()
-
-    async def execute(self, query, *args):
-        async with self.pool.acquire() as connection:
-            return await connection.execute(query, *args)
-
-    async def fetch_one(self, query, *args):
-        async with self.pool.acquire() as connection:
-            return await connection.fetchrow(query, *args)
-
-    async def fetch_all(self, query, *args):
-        async with self.pool.acquire() as connection:
-            return await connection.fetch(query, *args)
-
-database = Database()
+# Example table (optional)
+deals = sqlalchemy.Table(
+    "deals",
+    metadata,
+    sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True),
+    sqlalchemy.Column("name", sqlalchemy.String, nullable=False),
+    sqlalchemy.Column("price", sqlalchemy.Float, nullable=False),
+)

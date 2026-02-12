@@ -1,29 +1,29 @@
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+# app/routes/buyers.py
+from fastapi import APIRouter
+from app.db import database as db
 
-router = APIRouter(tags=["buyers"])
-
-class BuyerCreate(BaseModel):
-    name: str
-    email: str
-    asset_type: str
-    city: str
-    min_price: float
-    max_price: float
-    tier: str = "free"
+router = APIRouter(tags=["Buyers"])
 
 @router.post("/create")
-def create_buyer(buyer: BuyerCreate):
-    return {"message": "Buyer created", "buyer": buyer.dict()}
+async def create_buyer(name: str, email: str):
+    query = "INSERT INTO buyers(name, email) VALUES($1, $2)"
+    await db.execute(query, name, email)
+    return {"ok": True, "message": "Buyer created"}
 
 @router.get("/")
-def list_buyers():
-    return {"buyers": []}
+async def list_buyers():
+    query = "SELECT * FROM buyers"
+    buyers = await db.fetch_all(query)
+    return {"ok": True, "buyers": buyers}
 
 @router.get("/{buyer_id}")
-def get_buyer(buyer_id: int):
-    return {"buyer_id": buyer_id, "name": "Test Buyer"}
+async def get_buyer(buyer_id: int):
+    query = "SELECT * FROM buyers WHERE id=$1"
+    buyer = await db.fetch_one(query, buyer_id)
+    return {"ok": True, "buyer": buyer}
 
 @router.post("/disable/{buyer_id}")
-def disable_buyer(buyer_id: int):
-    return {"buyer_id": buyer_id, "status": "disabled"}
+async def disable_buyer(buyer_id: int):
+    query = "UPDATE buyers SET active=false WHERE id=$1"
+    await db.execute(query, buyer_id)
+    return {"ok": True, "message": "Buyer disabled"}

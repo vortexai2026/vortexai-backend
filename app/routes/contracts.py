@@ -1,36 +1,18 @@
-import uuid
-import json
-from fastapi import APIRouter, HTTPException
-from fastapi.responses import FileResponse
+# app/routes/contracts.py
+from fastapi import APIRouter
+from app.db import database as db
 
-from app.database import execute, fetch_one
-from app.services.contract_generator import generate_contract_pdf
+router = APIRouter(tags=["Contracts"])
 
-router = APIRouter(prefix="/contracts", tags=["contracts"])
+@router.post("/contracts/draft/{deal_id}")
+async def create_contract_draft(deal_id: int, content: str):
+    query = "INSERT INTO contracts(deal_id, content) VALUES($1, $2) RETURNING id"
+    draft = await db.fetch_one(query, deal_id, content)
+    return {"ok": True, "draft_id": draft["id"]}
 
-
-@router.post("/draft/{deal_id}")
-def create_contract_draft(deal_id: str, payload: dict):
-    draft_id = str(uuid.uuid4())
-
-    execute("""
-        INSERT INTO contract_drafts (id, deal_id, contract_type, data)
-        VALUES (%s,%s,%s,%s::jsonb)
-    """, (
-        draft_id,
-        deal_id,
-        payload.get("contract_type", "assignment"),
-        json.dumps(payload)
-    ))
-
-    return {"ok": True, "draft_id": draft_id}
-
-
-@router.get("/pdf/{draft_id}")
-def get_contract_pdf(draft_id: str):
-    row = fetch_one("SELECT * FROM contract_drafts WHERE id=%s", (draft_id,))
-    if not row:
-        raise HTTPException(status_code=404, detail="Draft not found")
-
-    pdf_path = generate_contract_pdf(row["data"])
-    return FileResponse(pdf_path, media_type="application/pdf", filename="contract_draft.pdf")
+@router.get("/contracts/pdf/{draft_id}")
+async def get_contract_pdf(draft_id: int):
+    # Placeholder PDF logic
+    query = "SELECT * FROM contracts WHERE id=$1"
+    draft = await db.fetch_one(query, draft_id)
+    return {"ok": True, "pdf_url": f"/pdfs/{draft_id}.pdf"}

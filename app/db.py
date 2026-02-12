@@ -1,18 +1,18 @@
-import databases
-import sqlalchemy
 import os
+import sqlalchemy
+import databases
 
-# Load env variables if you want
+# Database URL (adjust if needed)
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
     "postgresql://postgres:postgres@db:5432/vortexai"
 )
 
-# Database connection
+# Connect to database
 database = databases.Database(DATABASE_URL)
 metadata = sqlalchemy.MetaData()
 
-# Example table (optional)
+# Example table
 deals = sqlalchemy.Table(
     "deals",
     metadata,

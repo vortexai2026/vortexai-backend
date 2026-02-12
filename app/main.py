@@ -2,16 +2,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import (
-    buyers,
-    deals,
-    contracts,
-    ingest,
-    outreach,
-    pdf,
-    sources,
-    stripe
-)
+from app.routes import buyers, deals, contracts, ingest, outreach, pdf, sources, stripe
 
 app = FastAPI(
     title="VortexAI Backend",
@@ -48,7 +39,9 @@ app.include_router(stripe.router, prefix="/stripe")
 @app.on_event("startup")
 async def startup_event():
     print("VortexAI Backend starting up...")
+    await database.connect()
 
 @app.on_event("shutdown")
 async def shutdown_event():
     print("VortexAI Backend shutting down...")
+    await database.disconnect()

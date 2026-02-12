@@ -1,18 +1,22 @@
-def detect_intent(text: str) -> str:
-    text = text.lower()
+from app.database import fetch_all, execute
 
-    buyer_keywords = [
-        "looking for", "need", "want to buy",
-        "searching for", "anyone have"
-    ]
 
-    seller_keywords = [
-        "for sale", "selling", "must sell",
-        "price drop", "urgent sale"
-    ]
+def ingest_source(source_name: str) -> int:
+    """
+    Generic ingestion handler.
+    You can expand this later to scrape, fetch APIs, or process files.
+    For now, it simply marks deals from a source as 'ingested'.
+    """
 
-    if any(k in text for k in buyer_keywords):
-        return "buyer"
-    if any(k in text for k in seller_keywords):
-        return "seller"
-    return "unknown"
+    # Count deals from this source
+    rows = fetch_all("SELECT id FROM deals WHERE source=%s", (source_name,))
+    count = len(rows)
+
+    # Mark them as ingested
+    execute("""
+        UPDATE deals
+        SET ingested = TRUE
+        WHERE source = %s
+    """, (source_name,))
+
+    return count

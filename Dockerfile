@@ -1,18 +1,20 @@
-# Use official Python image
+# Use Python 3.11
 FROM python:3.11-slim
 
-# Set work directory
+# Set working directory
 WORKDIR /app
 
-# Copy requirements and install
+# Copy requirements
 COPY requirements.txt .
+
+# Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy all app files
-COPY ./app ./app
+# Copy the entire project
+COPY . .
 
-# Expose port
-EXPOSE 8000
+# Expose port 8080
+EXPOSE 8080
 
-# Start app
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Run the app with uvicorn
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]

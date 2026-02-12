@@ -1,20 +1,18 @@
-# Use Python 3.11 slim image
+# Base image
 FROM python:3.11-slim
 
-# Set working directory inside container
+# Set work directory
 WORKDIR /app
 
-# Copy requirements
+# Copy and install dependencies
 COPY requirements.txt .
-
-# Install Python dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy all project files
+# Copy app code
 COPY . .
 
-# Expose port 8080
+# Expose port
 EXPOSE 8080
 
-# Run FastAPI with uvicorn
+# Run the app
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080", "--reload"]

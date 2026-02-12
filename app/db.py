@@ -1,30 +1,22 @@
-# app/db.py
-from sqlalchemy import MetaData, Table, Column, Integer, String
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, declarative_base
 
-# Replace these with your database info
-DB_USER = "your_user"
-DB_PASS = "your_password"
-DB_HOST = "localhost"
-DB_NAME = "vortexai_db"
+DATABASE_URL = "postgresql+asyncpg://postgres.msebndbsblvsslpqpprq:KBWONABclpSz5a1S@aws-1-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require"
 
-DATABASE_URL = f"postgresql+asyncpg://{DB_USER}:{DB_PASS}@{DB_HOST}/{DB_NAME}"
-
-# Async engine
+# Create async engine
 engine = create_async_engine(DATABASE_URL, echo=True)
 
-# Async session
-async_session = sessionmaker(
-    engine, class_=AsyncSession, expire_on_commit=False
+# Create async session
+AsyncSessionLocal = sessionmaker(
+    bind=engine,
+    expire_on_commit=False,
+    class_=AsyncSession
 )
 
-metadata = MetaData()
+# Base model for ORM
+Base = declarative_base()
 
-# Example table
-deals = Table(
-    "deals",
-    metadata,
-    Column("id", Integer, primary_key=True),
-    Column("name", String(100)),
-)
+# Dependency for FastAPI routes
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        yield session

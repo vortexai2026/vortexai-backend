@@ -5,24 +5,29 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    raise Exception("❌ DATABASE_URL is missing")
+    raise Exception("❌ DATABASE_URL missing!")
 
-# Convert URL for asyncpg
-DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://")
+# Make sure the URL has asyncpg prefix
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://")
+elif DATABASE_URL.startswith("postgresql://"):
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
 
-# Create SSL context
+# SSL context for Supabase
 ssl_context = ssl.create_default_context()
+ssl_context.check_hostname = False
+ssl_context.verify_mode = ssl.CERT_NONE  # Supabase allows this
 
 engine = create_async_engine(
     DATABASE_URL,
     echo=True,
-    connect_args={"ssl": ssl_context}  # use ssl here instead of sslmode
+    connect_args={"ssl": ssl_context}  # pass SSL config here
 )
 
 SessionLocal = sessionmaker(
     bind=engine,
-    class_=AsyncSession,
-    expire_on_commit=False
+    expire_on_commit=False,
+    class_=AsyncSession
 )
 
 Base = declarative_base()

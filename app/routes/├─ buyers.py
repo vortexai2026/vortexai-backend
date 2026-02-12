@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
-from app.db import db
+from app.db import db  # your database helper
 
-router = APIRouter(prefix="/buyers", tags=["buyers"])
+router = APIRouter(tags=["buyers"])
 
 # Pydantic model for creating a buyer
 class BuyerCreate(BaseModel):
@@ -25,7 +25,6 @@ def create_buyer(buyer: BuyerCreate):
     RETURNING id;
     """
     try:
-        # Execute the query and return the new buyer ID
         new_id = db.fetch_one(query, buyer.dict())
         return {"id": new_id["id"], "message": "Buyer created successfully"}
     except Exception as e:

@@ -1,37 +1,31 @@
 import os
-import ssl
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
+from dotenv import load_dotenv
+
+load_dotenv()  # Load DATABASE_URL from .env
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    raise Exception("❌ DATABASE_URL missing!")
+    raise Exception("❌ DATABASE_URL is missing in .env")
 
-# Make sure the URL has asyncpg prefix
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://")
-elif DATABASE_URL.startswith("postgresql://"):
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+# Make sure asyncpg URL format
+DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://")
 
-# SSL context for Supabase
-ssl_context = ssl.create_default_context()
-ssl_context.check_hostname = False
-ssl_context.verify_mode = ssl.CERT_NONE  # Supabase allows this
+# Create async engine
+engine = create_async_engine(DATABASE_URL, echo=True)
 
-engine = create_async_engine(
-    DATABASE_URL,
-    echo=True,
-    connect_args={"ssl": ssl_context}  # pass SSL config here
-)
-
+# Async session
 SessionLocal = sessionmaker(
     bind=engine,
-    expire_on_commit=False,
-    class_=AsyncSession
+    class_=AsyncSession,
+    expire_on_commit=False
 )
 
+# Base for models
 Base = declarative_base()
 
+# Dependency
 async def get_db():
     async with SessionLocal() as session:
         yield session

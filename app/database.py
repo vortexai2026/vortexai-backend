@@ -5,18 +5,18 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
-    raise Exception("DATABASE_URL is missing")
+    raise Exception("❌ DATABASE_URL is missing")
 
-# Convert to asyncpg URL
+# Convert URL for asyncpg
 DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://")
-DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
 
+# Create SSL context
 ssl_context = ssl.create_default_context()
 
 engine = create_async_engine(
     DATABASE_URL,
     echo=True,
-    connect_args={"ssl": ssl_context}
+    connect_args={"ssl": ssl_context}  # use ssl here instead of sslmode
 )
 
 SessionLocal = sessionmaker(

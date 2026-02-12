@@ -1,35 +1,53 @@
-# app/routes/buyers.py
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
+# vortexai-backend/app/services/buyers.py
+
 from app.db import db
 
-router = APIRouter(prefix="/buyers", tags=["buyers"])
-
-class BuyerCreate(BaseModel):
-    name: str
-    email: str
-    asset_types: list[str]
-    cities: list[str]
-    min_price: float
-    max_price: float
-    tier: str = "free"
-
-@router.post("/create")
-def create_buyer(buyer: BuyerCreate):
+def create_buyer_in_db(buyer_data: dict):
+    """
+    Create a new buyer in the database.
+    Expects a dict with keys: name, email, asset_type, city, min_price, max_price, tier
+    """
     query = """
     INSERT INTO buyers
-    (name, email, asset_types, cities, min_price, max_price, tier)
+    (name, email, asset_type, city, min_price, max_price, tier)
     VALUES
-    (:name, :email, :asset_types, :cities, :min_price, :max_price, :tier)
+    (:name, :email, :asset_type, :city, :min_price, :max_price, :tier)
     RETURNING id;
     """
-    try:
-        # Convert lists to JSON strings if your DB column type is JSON or TEXT
-        data = buyer.dict()
-        data["asset_types"] = str(data["asset_types"])
-        data["cities"] = str(data["cities"])
+    return db.fetch_one(query, buyer_data)
 
-        new_id = db.fetch_one(query, data)
-        return {"id": new_id}
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"create_buyer failed: {str(e)}")
+def list_buyers_from_db(limit: int = 50):
+    """
+    List buyers from the database, with a limit.
+    """
+    query = """
+    SELECT id, name, email, asset_type, city, min_price, max_price, tier
+    FROM buyers
+    ORDER BY id DESC
+    LIMIT :limit;
+    """
+    return db.fetch_all(query, {"limit": limit})
+
+def get_buyer_from_db(buyer_id: int):
+    """
+    Get a single buyer by ID.
+    """
+    query = """
+    SELECT id, name, email, asset_type, city, min_price, max_price, tier
+    FROM buyers
+    WHERE id = :id;
+    """
+    return db.fetch_one(query, {"id": buyer_id})
+
+def disable_buyer_in_db(buyer_id: int):
+    """
+    Disable a buyer by setting a 'disabled' flag (or delete if you prefer).
+    Make sure your buyers table has a 'disabled' boolean column.
+    """
+    query = """
+    UPDATE buyers
+    SET disabled = TRUE
+    WHERE id = :id
+    RETURNING id;
+    """
+    return db.fetch_one(query, {"id": buyer_id})

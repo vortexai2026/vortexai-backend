@@ -1,60 +1,65 @@
-import uuid
+# deals_routes.py
 from fastapi import APIRouter, HTTPException
+from app.models import DealCreate, DealOut
 from app.database import execute, fetch_all, fetch_one
-from app.ai.ai_buyer_matcher import match_buyers_to_deal
+import uuid
 
-router = APIRouter(prefix="/deals", tags=["deals"])
+router = APIRouter(prefix="/deals", tags=["Deals"])
 
-
+# Create a new deal
 @router.post("/create")
-def create_deal(payload: dict):
+def create_deal(payload: DealCreate):
     deal_id = str(uuid.uuid4())
-
     try:
         execute("""
             INSERT INTO deals (
-                id, title, description, location,
-                price, asset_type, seller_name, seller_email
-            ) VALUES (%s,%s,%s,%s,%s,%s,%s,%s)
+                id, title, description, price, city, asset_type, active
+            ) VALUES (%s, %s, %s, %s, %s, %s, TRUE)
         """, (
             deal_id,
-            payload.get("title"),
-            payload.get("description"),
-            payload.get("location"),
-            payload.get("price"),
-            payload.get("asset_type"),
-            payload.get("seller_name"),
-            payload.get("seller_email")
+            payload.title,
+            payload.description,
+            payload.price,
+            payload.city,
+            payload.asset_type.lower().strip()
         ))
+        return {"ok": True, "deal_id": deal_id}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create deal: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"create_deal failed: {str(e)}")
 
-    return {"ok": True, "deal_id": deal_id}
-
-
-@router.get("")
+# List all active deals
+@router.get("", response_model=list[DealOut])
 def list_deals(limit: int = 50):
     deals = fetch_all("""
         SELECT * FROM deals
+        WHERE active = TRUE
         ORDER BY created_at DESC
         LIMIT %s
     """, (limit,))
-    return {"count": len(deals), "deals": deals}
+    return deals
 
-
-@router.get("/{deal_id}")
+# Get a single deal by ID
+@router.get("/{deal_id}", response_model=DealOut)
 def get_deal(deal_id: str):
     deal = fetch_one("SELECT * FROM deals WHERE id=%s", (deal_id,))
     if not deal:
         raise HTTPException(status_code=404, detail="Deal not found")
     return deal
 
-
+# Match buyers to a deal
 @router.get("/match/{deal_id}")
 def match_buyers(deal_id: str):
+    # Example: find buyers interested in this asset type and city
     deal = fetch_one("SELECT * FROM deals WHERE id=%s", (deal_id,))
     if not deal:
         raise HTTPException(status_code=404, detail="Deal not found")
 
-    matches = match_buyers_to_deal(dict(deal))
-    return {"deal_id": deal_id, "matches": matches}
+    buyers = fetch_all("""
+        SELECT * FROM buyers
+        WHERE active = TRUE
+        AND (asset_type = %s OR asset_type = 'any')
+        AND (city = %s OR city IS NULL)
+        ORDER BY created_at DESC
+    """, (deal["asset_type"], deal["city"]))
+
+    return {"deal": deal, "matched_buyers_count": len(buyers), "buyers": buyers}

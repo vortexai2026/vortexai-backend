@@ -1,12 +1,7 @@
+# app/routes/stripe.py
 from fastapi import APIRouter
-from pydantic import BaseModel
-
-router = APIRouter(tags=["stripe"])
-
-class CheckoutRequest(BaseModel):
-    amount: float
-    currency: str = "USD"
+router = APIRouter(tags=["Stripe"])
 
 @router.post("/stripe/checkout")
-def stripe_checkout(request: CheckoutRequest):
-    return {"status": "success", "amount": request.amount, "currency": request.currency}
+async def checkout(amount: float):
+    return {"ok": True, "checkout_url": f"https://checkout.stripe.com/pay/{amount}"}

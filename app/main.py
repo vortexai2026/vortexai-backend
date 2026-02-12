@@ -1,47 +1,37 @@
-# app/main.py
 from fastapi import FastAPI
+from app.db import database, metadata, deals
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routes import buyers, deals, contracts, ingest, outreach, pdf, sources, stripe
+app = FastAPI(title="VortexAI Backend")
 
-app = FastAPI(
-    title="VortexAI Backend",
-    version="0.1.0",
-    description="Backend API for VortexAI platform"
-)
-
+# Allow all CORS (adjust for production)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
-    allow_headers=["*"]
+    allow_headers=["*"],
 )
 
-@app.get("/", tags=["Root"])
-def root():
-    return {"ok": True, "message": "VortexAI Backend is running!"}
-
-@app.get("/health", tags=["Health"])
-def health():
-    return {"ok": True, "status": "healthy"}
-
-# Include routers
-app.include_router(buyers.router, prefix="/buyers")
-app.include_router(deals.router, prefix="/deals")
-app.include_router(contracts.router, prefix="/contracts")
-app.include_router(ingest.router, prefix="/ingest")
-app.include_router(outreach.router, prefix="/outreach")
-app.include_router(pdf.router, prefix="/pdf")
-app.include_router(sources.router, prefix="/sources")
-app.include_router(stripe.router, prefix="/stripe")
-
+# Startup / shutdown events
 @app.on_event("startup")
 async def startup_event():
-    print("VortexAI Backend starting up...")
     await database.connect()
+    # Create tables if not exist
+    engine = sqlalchemy.create_engine(str(database.url))
+    metadata.create_all(engine)
 
 @app.on_event("shutdown")
 async def shutdown_event():
-    print("VortexAI Backend shutting down...")
     await database.disconnect()
+
+# Health check
+@app.get("/health")
+async def health_check():
+    return {"status": "ok"}
+
+# Example route
+@app.get("/deals")
+async def get_deals():
+    query = deals.select()
+    return await database.fetch_all(query)

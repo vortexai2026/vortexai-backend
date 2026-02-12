@@ -1,50 +1,28 @@
-from sqlalchemy import Column, Integer, String, Float, Boolean, DateTime, ForeignKey
-from sqlalchemy.sql import func
-from sqlalchemy.orm import relationship
-from app.database import Base
+import os
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker, declarative_base
+from dotenv import load_dotenv
 
+load_dotenv()
 
-class Buyer(Base):
-    __tablename__ = "buyers"
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise Exception("❌ DATABASE_URL missing in .env")
 
-    id = Column(Integer, primary_key=True, index=True)
-    full_name = Column(String, nullable=False)
-    email = Column(String, unique=True, index=True, nullable=False)
+# Async engine
+engine = create_async_engine(DATABASE_URL, echo=True)
 
-    city = Column(String, nullable=False)
-    state = Column(String, nullable=True)
-    asset_type = Column(String, nullable=False)  # house, condo, land, multi-family
-    min_budget = Column(Float, nullable=False)
-    max_budget = Column(Float, nullable=False)
+# Async session
+SessionLocal = sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False
+)
 
-    is_active = Column(Boolean, default=True)
+# Base class for models
+Base = declarative_base()
 
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-
-class Deal(Base):
-    __tablename__ = "deals"
-
-    id = Column(Integer, primary_key=True, index=True)
-
-    title = Column(String, nullable=False)
-    city = Column(String, nullable=False)
-    state = Column(String, nullable=True)
-
-    asset_type = Column(String, nullable=False)
-    price = Column(Float, nullable=False)
-
-    description = Column(String, nullable=True)
-
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
-
-
-class Match(Base):
-    __tablename__ = "matches"
-
-    id = Column(Integer, primary_key=True, index=True)
-
-    buyer_id = Column(Integer, ForeignKey("buyers.id"), nullable=False)
-    deal_id = Column(Integer, ForeignKey("deals.id"), nullable=False)
-
-    created_at = Column(DateTime(timezone=True), server_default=func.now())
+# Dependency
+async def get_db():
+    async with SessionLocal() as session:
+        yield session

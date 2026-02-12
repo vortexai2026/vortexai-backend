@@ -1,45 +1,35 @@
 # worker/match_buyers.py
-from app.database import fetch_all, execute
-from datetime import datetime
+from app.db import database as db
 
-def match_buyers_to_deals():
-    """
-    Matches buyers to new deals based on preferences:
-    - asset_type
-    - city
-    - min_price / max_price
-    """
-    # 1️⃣ Fetch all active deals that are not yet matched fully
-    deals = fetch_all("SELECT * FROM deals WHERE active = TRUE;")
+def match_buyers_for_deal(deal_id: int):
+    # Fetch deal info
+    deal = db.fetch_one("SELECT * FROM deals WHERE id = :id;", {"id": deal_id})
+    if not deal:
+        print(f"No deal found with id {deal_id}")
+        return []
 
-    for deal in deals:
-        # 2️⃣ Fetch buyers whose preferences match this deal
-        buyers = fetch_all("""
-            SELECT * FROM buyers
-            WHERE active = TRUE
-              AND asset_type = %(asset_type)s
-              AND city = %(city)s
-              AND min_price <= %(price)s
-              AND max_price >= %(price)s;
-        """, {
-            "asset_type": deal["asset_type"],
-            "city": deal["city"],
-            "price": deal["price"]
-        })
+    # Match buyers by city, asset type, and price range
+    matched_buyers = db.fetch_all(
+        """
+        SELECT * FROM buyers
+        WHERE active = TRUE
+        AND asset_type = :asset_type
+        AND city = :city
+        AND min_price <= :price
+        AND max_price >= :price
+        """,
+        {"asset_type": deal["asset_type"], "city": deal["city"], "price": deal["price"]}
+    )
 
-        for buyer in buyers:
-            # 3️⃣ Insert into matches table if not exists
-            try:
-                execute("""
-                    INSERT INTO matches (deal_id, buyer_id)
-                    VALUES (%s, %s)
-                    ON CONFLICT (deal_id, buyer_id) DO NOTHING;
-                """, (deal["id"], buyer["id"]))
-                print(f"Matched Deal {deal['id']} to Buyer {buyer['id']}")
-            except Exception as e:
-                print(f"Failed to match Deal {deal['id']} to Buyer {buyer['id']}: {str(e)}")
+    # Notify / log matched buyers
+    for buyer in matched_buyers:
+        print(f"Matched Buyer {buyer['name']} ({buyer['email']}) for Deal {deal_id}")
+        # Optional: send email or push notification here
 
+    return matched_buyers
+
+# Standalone run for testing
 if __name__ == "__main__":
-    print(f"[{datetime.now()}] Starting buyer-deal matching...")
-    match_buyers_to_deals()
-    print(f"[{datetime.now()}] Matching completed.")
+    test_deal_id = 1  # replace with a real deal id
+    matches = match_buyers_for_deal(test_deal_id)
+    print(f"Total matches found: {len(matches)}")

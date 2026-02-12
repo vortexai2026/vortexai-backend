@@ -1,41 +1,9 @@
-from pydantic import BaseModel
-from typing import Optional, Dict, Any
+from sqlalchemy import Column, Integer, String
+from .database import Base
 
-
-class DealCreate(BaseModel):
-    source: str
-    external_id: Optional[str] = None
-    asset_type: str
-    title: str
-    description: Optional[str] = None
-    location: Optional[str] = None
-    url: Optional[str] = None
-    price: Optional[float] = None
-    currency: Optional[str] = "USD"
-
-
-class LearningEvent(BaseModel):
-    deal_id: str
-    event_type: str
-    metadata: Optional[Dict[str, Any]] = None
-
-
-class BuyerCreate(BaseModel):
-    email: str
-    name: Optional[str] = None
-    phone: Optional[str] = None
-
-    asset_type: str
-    city: Optional[str] = None
-    min_price: Optional[float] = 0
-    max_price: Optional[float] = 999999999
-
-    tier: Optional[str] = "free"
-
-
-class CheckoutRequest(BaseModel):
-    email: str
-    name: Optional[str] = None
-    location: Optional[str] = None
-    asset_type: str
-    budget: float
+class User(Base):
+    __tablename__ = "users"
+    
+    id = Column(Integer, primary_key=True, index=True)
+    name = Column(String, nullable=False)
+    email = Column(String, unique=True, nullable=False)

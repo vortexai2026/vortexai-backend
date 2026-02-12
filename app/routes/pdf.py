@@ -1,7 +1,7 @@
+# app/routes/pdf.py
 from fastapi import APIRouter
-
-router = APIRouter(tags=["pdf"])
+router = APIRouter(tags=["PDF"])
 
 @router.post("/pdf/generate/{deal_id}")
-def generate_pdf(deal_id: int):
-    return {"deal_id": deal_id, "pdf_url": "https://example.com/generated.pdf"}
+async def generate_pdf(deal_id: int):
+    return {"ok": True, "pdf_url": f"/pdfs/deal_{deal_id}.pdf"}

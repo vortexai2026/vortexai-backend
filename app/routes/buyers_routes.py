@@ -2,9 +2,22 @@ import uuid
 from fastapi import APIRouter, HTTPException
 from app.database import execute, fetch_all, fetch_one
 from app.models import BuyerCreate
+from pydantic import BaseModel
+from typing import List, Optional
 
-router = APIRouter(prefix="/buyers", tags=["buyers"])
+router = APIRouter(prefix="/buyers", tags=["Buyers"])
 
+class BuyerOut(BaseModel):
+    id: str
+    email: str
+    name: str
+    phone: Optional[str]
+    asset_type: str
+    city: Optional[str]
+    min_price: int
+    max_price: int
+    tier: str
+    active: bool
 
 @router.post("/create")
 def create_buyer(payload: BuyerCreate):
@@ -33,8 +46,7 @@ def create_buyer(payload: BuyerCreate):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"create_buyer failed: {str(e)}")
 
-
-@router.get("")
+@router.get("/", response_model=List[BuyerOut])
 def list_buyers(limit: int = 50):
     buyers = fetch_all("""
         SELECT * FROM buyers
@@ -42,16 +54,14 @@ def list_buyers(limit: int = 50):
         ORDER BY created_at DESC
         LIMIT %s
     """, (limit,))
-    return {"count": len(buyers), "buyers": buyers}
+    return buyers
 
-
-@router.get("/{buyer_id}")
+@router.get("/{buyer_id}", response_model=BuyerOut)
 def get_buyer(buyer_id: str):
     buyer = fetch_one("SELECT * FROM buyers WHERE id=%s", (buyer_id,))
     if not buyer:
         raise HTTPException(status_code=404, detail="Buyer not found")
     return buyer
-
 
 @router.post("/disable/{buyer_id}")
 def disable_buyer(buyer_id: str):

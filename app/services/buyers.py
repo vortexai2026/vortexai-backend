@@ -8,7 +8,6 @@ router = APIRouter(prefix="/buyers", tags=["buyers"])
 class BuyerCreate(BaseModel):
     name: str
     email: str
-    phone: str | None = None
     asset_types: list[str]
     cities: list[str]
     min_price: float

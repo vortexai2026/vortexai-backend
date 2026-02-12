@@ -1,37 +1,29 @@
 # app/db.py
+import asyncio
+import asyncpg
 
-import os
-import psycopg2
-import psycopg2.extras
+DATABASE_URL = "postgresql://username:password@localhost:5432/vortexai"
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is not set")
-
-def get_conn():
-    return psycopg2.connect(DATABASE_URL, connect_timeout=10)
-
-def fetch_all(query, params=()):
-    with get_conn() as conn:
-        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(query, params)
-            return cur.fetchall()
-
-def fetch_one(query, params=()):
-    rows = fetch_all(query, params)
-    return rows[0] if rows else None
-
-def execute(query, params=()):
-    with get_conn() as conn:
-        with conn.cursor() as cur:
-            cur.execute(query, params)
-        conn.commit()
-
-# Create "database" object for old import style
 class Database:
-    fetch_all = staticmethod(fetch_all)
-    fetch_one = staticmethod(fetch_one)
-    execute = staticmethod(execute)
+    def __init__(self):
+        self.pool = None
+
+    async def connect(self):
+        self.pool = await asyncpg.create_pool(DATABASE_URL)
+
+    async def disconnect(self):
+        await self.pool.close()
+
+    async def execute(self, query, *args):
+        async with self.pool.acquire() as connection:
+            return await connection.execute(query, *args)
+
+    async def fetch_one(self, query, *args):
+        async with self.pool.acquire() as connection:
+            return await connection.fetchrow(query, *args)
+
+    async def fetch_all(self, query, *args):
+        async with self.pool.acquire() as connection:
+            return await connection.fetch(query, *args)
 
 database = Database()

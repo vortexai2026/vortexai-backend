@@ -1,7 +1,7 @@
+# app/routes/ingest.py
 from fastapi import APIRouter
-
-router = APIRouter(tags=["ingest"])
+router = APIRouter(tags=["Ingest"])
 
 @router.get("/")
-def ingest_root():
-    return {"message": "Ingest route is ready"}
+async def ingest_root():
+    return {"ok": True, "message": "Ingest root"}

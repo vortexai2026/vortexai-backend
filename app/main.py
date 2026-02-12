@@ -2,16 +2,16 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Import routers
+# Import routers (match your new filenames)
 from app.routes import (
-    buyers_routes,
-    deals_routes,
-    contracts_routes,
-    ingest_routes,
-    outreach_routes,
-    pdf_routes,
-    sources_routes,
-    stripe_routes
+    buyers,
+    deals,
+    contracts,
+    ingest,
+    outreach,
+    pdf,
+    sources,
+    stripe
 )
 
 app = FastAPI(
@@ -39,15 +39,15 @@ def root():
 def health():
     return {"ok": True, "status": "healthy"}
 
-# Include routers with **prefixes here only**
-app.include_router(buyers_routes.router, prefix="/buyers")
-app.include_router(deals_routes.router, prefix="/deals")
-app.include_router(contracts_routes.router, prefix="/contracts")
-app.include_router(ingest_routes.router, prefix="/ingest")
-app.include_router(outreach_routes.router, prefix="/outreach")
-app.include_router(pdf_routes.router, prefix="/pdf")
-app.include_router(sources_routes.router, prefix="/sources")
-app.include_router(stripe_routes.router, prefix="/stripe")
+# Include routers
+app.include_router(buyers.router, prefix="/buyers")
+app.include_router(deals.router, prefix="/deals")
+app.include_router(contracts.router, prefix="/contracts")
+app.include_router(ingest.router, prefix="/ingest")
+app.include_router(outreach.router, prefix="/outreach")
+app.include_router(pdf.router, prefix="/pdf")
+app.include_router(sources.router, prefix="/sources")
+app.include_router(stripe.router, prefix="/stripe")
 
 # Startup / shutdown events
 @app.on_event("startup")

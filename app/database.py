@@ -1,29 +1,19 @@
-# app/database.py
-import os
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql+asyncpg://postgres:password@host:port/dbname"
-)
+DATABASE_URL = "postgresql+asyncpg://postgres:<PASSWORD>@<HOST>:<PORT>/<DBNAME>"
 
-# Create async engine with statement_cache_size=0 for PgBouncer
+# Disable asyncpg prepared statement cache to avoid DuplicatePreparedStatementError
 engine = create_async_engine(
     DATABASE_URL,
-    echo=True,
-    connect_args={"statement_cache_size": 0}  # <-- this is the fix
+    echo=True,  # optional: shows SQL logs
+    connect_args={"statement_cache_size": 0},
 )
 
-# Async session
+# Async session factory
 async_session = sessionmaker(
     engine, class_=AsyncSession, expire_on_commit=False
 )
 
-# Base for models
+# Base class for models
 Base = declarative_base()
-
-# Dependency
-async def get_db():
-    async with async_session() as session:
-        yield session

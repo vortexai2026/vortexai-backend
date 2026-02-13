@@ -1,13 +1,32 @@
 from pydantic import BaseModel
 
+# ---------------- USERS ----------------
+
 class UserCreate(BaseModel):
-    name: str
     email: str
+    password: str
 
-class UserResponse(BaseModel):
-    id: int
-    name: str
+class UserLogin(BaseModel):
     email: str
+    password: str
 
-    class Config:
-        from_attributes = True
+
+# ---------------- BUYERS ----------------
+
+class BuyerCreate(BaseModel):
+    full_name: str
+    phone: str
+    city: str
+    budget_min: float
+    budget_max: float
+    asset_type: str
+
+
+# ---------------- DEALS ----------------
+
+class DealCreate(BaseModel):
+    title: str
+    city: str
+    asset_type: str
+    price: float
+    description: str

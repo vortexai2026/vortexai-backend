@@ -1,16 +1,32 @@
 from fastapi import FastAPI
-from database import engine, Base, async_session
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.orm import sessionmaker
+import asyncio
 
-app = FastAPI(title="Vortex AI Backend")
+DATABASE_URL = "postgresql+asyncpg://postgres:XTJGOeohDGvoDAHrvSIfoMkKJCgunrQO@postgres.railway.internal:5432/railway"
 
-# Example root endpoint
-@app.get("/")
-async def root():
-    return {"status": "ok"}
+engine = create_async_engine(DATABASE_URL, echo=True)
+AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
 
-# Optional: initialize database on startup
+app = FastAPI()
+
+async def connect_db(retries=5, delay=3):
+    for attempt in range(1, retries + 1):
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(lambda conn: print("✅ Connected to Railway DB"))
+            return
+        except Exception as e:
+            print(f"Attempt {attempt} failed: {e}")
+            if attempt < retries:
+                await asyncio.sleep(delay)
+            else:
+                raise e
+
 @app.on_event("startup")
 async def startup_event():
-    async with engine.begin() as conn:
-        # Create tables if not exist
-        await conn.run_sync(Base.metadata.create_all)
+    await connect_db()
+
+@app.get("/")
+async def root():
+    return {"message": "Vortex AI is running and DB is connected!"}

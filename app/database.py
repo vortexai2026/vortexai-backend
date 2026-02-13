@@ -1,32 +1,24 @@
-import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
-from dotenv import load_dotenv
 
-load_dotenv()
+# Your Supabase PostgreSQL connection
+DATABASE_URL = "postgresql+asyncpg://postgres.msebndbsblvsslpqpprq:KBWONABclpSz5a1S@aws-1-us-east-1.pooler.supabase.com:6543/postgres"
 
-DATABASE_URL = os.getenv("DATABASE_URL")
-
-if not DATABASE_URL:
-    raise Exception("❌ DATABASE_URL is missing. Add it in Railway Variables.")
-
-# If someone accidentally uses postgres://
-DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://")
-
+# Fix DuplicatePreparedStatementError with PgBouncer
 engine = create_async_engine(
     DATABASE_URL,
     echo=True,
-    connect_args={"statement_cache_size": 0}  # ✅ FIX FOR SUPABASE POOLER / PGBOUNCER
-)
-
-SessionLocal = sessionmaker(
-    bind=engine,
-    class_=AsyncSession,
-    expire_on_commit=False
+    connect_args={"statement_cache_size": 0}  # critical fix
 )
 
 Base = declarative_base()
 
+async_session = sessionmaker(
+    engine,
+    class_=AsyncSession,
+    expire_on_commit=False
+)
+
 async def get_db():
-    async with SessionLocal() as session:
+    async with async_session() as session:
         yield session

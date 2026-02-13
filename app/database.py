@@ -2,6 +2,7 @@ import os
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
 from dotenv import load_dotenv
+from sqlalchemy.pool import NullPool
 
 load_dotenv()
 
@@ -10,15 +11,15 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise Exception("❌ DATABASE_URL is missing")
 
-# Fix old postgres:// format
 DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://")
 
-# Async engine (PgBouncer Fix)
 engine = create_async_engine(
     DATABASE_URL,
     echo=True,
+    poolclass=NullPool,  # IMPORTANT FIX
     connect_args={
-        "statement_cache_size": 0
+        "statement_cache_size": 0,  # IMPORTANT FIX
+        "prepared_statement_cache_size": 0
     }
 )
 

@@ -1,41 +1,45 @@
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float
-from sqlalchemy.orm import relationship
-from .database import Base
+from pydantic import BaseModel
 
-class User(Base):
-    __tablename__ = "users"
+# ---------------- USERS ----------------
+class UserCreate(BaseModel):
+    email: str
+    password: str
 
-    id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True)
-    hashed_password = Column(String)
-    is_admin = Column(Boolean, default=False)
+class UserLogin(BaseModel):
+    email: str
+    password: str
 
-    buyers = relationship("Buyer", back_populates="owner")
+# ---------------- BUYERS ----------------
+class BuyerCreate(BaseModel):
+    full_name: str
+    phone: str
+    city: str
+    budget_min: float
+    budget_max: float
+    asset_type: str
 
+class BuyerOut(BuyerCreate):
+    id: int
+    class Config:
+        orm_mode = True
 
-class Buyer(Base):
-    __tablename__ = "buyers"
+# ---------------- DEALS ----------------
+class DealCreate(BaseModel):
+    title: str
+    city: str
+    asset_type: str
+    price: float
+    description: str
 
-    id = Column(Integer, primary_key=True, index=True)
-    full_name = Column(String)
-    phone = Column(String)
-    city = Column(String)
-    budget_min = Column(Float)
-    budget_max = Column(Float)
-    asset_type = Column(String)
+class DealOut(DealCreate):
+    id: int
+    matched_buyer_id: int | None = None
+    class Config:
+        orm_mode = True
 
-    owner_id = Column(Integer, ForeignKey("users.id"))
-    owner = relationship("User", back_populates="buyers")
-
-
-class Deal(Base):
-    __tablename__ = "deals"
-
-    id = Column(Integer, primary_key=True, index=True)
-    title = Column(String)
-    city = Column(String)
-    asset_type = Column(String)
-    price = Column(Float)
-    description = Column(String)
-
-    matched_buyer_id = Column(Integer, ForeignKey("buyers.id"), nullable=True)
+# ---------------- MATCHES ----------------
+class MatchOut(BaseModel):
+    deal_id: int
+    buyer_id: int
+    class Config:
+        orm_mode = True

@@ -1,22 +1,19 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import sessionmaker, declarative_base
+import os
 
-DATABASE_URL = "postgresql+asyncpg://postgres:YOUR_PASSWORD@YOUR_HOST:5432/YOUR_DB"
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-# Create async engine (disable statement cache for PgBouncer transaction mode)
-engine = create_async_engine(
-    DATABASE_URL,
-    echo=True,
-    future=True,
-    connect_args={"statement_cache_size": 0}  # fixes DuplicatePreparedStatementError
-)
+engine = create_async_engine(DATABASE_URL, echo=True)
 
-# Async session
-async_session = sessionmaker(
+AsyncSessionLocal = sessionmaker(
     bind=engine,
     class_=AsyncSession,
     expire_on_commit=False
 )
 
-# Base class for models
 Base = declarative_base()
+
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        yield session

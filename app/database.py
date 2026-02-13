@@ -9,16 +9,16 @@ load_dotenv()
 DATABASE_URL = os.getenv("DATABASE_URL")
 
 if not DATABASE_URL:
-    raise Exception("❌ DATABASE_URL is missing")
+    raise Exception("❌ DATABASE_URL is missing in Railway ENV variables")
 
 DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://")
 
 engine = create_async_engine(
     DATABASE_URL,
     echo=True,
-    poolclass=NullPool,  # IMPORTANT FIX
+    poolclass=NullPool,
     connect_args={
-        "statement_cache_size": 0,  # IMPORTANT FIX
+        "statement_cache_size": 0,
         "prepared_statement_cache_size": 0
     }
 )

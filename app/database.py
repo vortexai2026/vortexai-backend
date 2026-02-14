@@ -7,12 +7,12 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL is missing.")
 
-# 🔥 HARD CLEAN — removes spaces, tabs, newlines
 DATABASE_URL = DATABASE_URL.strip().replace("\n", "").replace("\r", "")
 
-# 🔥 Force async driver even if Railway injects normal URL
 if DATABASE_URL.startswith("postgresql://"):
-    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://")
+    DATABASE_URL = DATABASE_URL.replace(
+        "postgresql://", "postgresql+asyncpg://"
+    )
 
 print("USING DATABASE URL:", repr(DATABASE_URL))
 

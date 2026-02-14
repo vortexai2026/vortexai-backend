@@ -1,27 +1,26 @@
-from pydantic import BaseModel, Field, validator
-from typing import Optional
+from pydantic import BaseModel, Field, ConfigDict
+
+# ---------- USERS ----------
+class UserCreate(BaseModel):
+    email: str
+    password: str
+
+class UserLogin(BaseModel):
+    email: str
+    password: str
 
 
-# =========================
-# BUYER
-# =========================
-
+# ---------- BUYERS ----------
 class BuyerCreate(BaseModel):
-    full_name: str = Field(..., min_length=2)
-    phone: str = Field(..., min_length=5)
-    city: str = Field(..., min_length=2)
-    budget_min: float = Field(..., gt=0)
-    budget_max: float = Field(..., gt=0)
-    asset_type: str = Field(..., min_length=2)
-
-    @validator("budget_max")
-    def validate_budget(cls, v, values):
-        if "budget_min" in values and v < values["budget_min"]:
-            raise ValueError("budget_max must be greater than or equal to budget_min")
-        return v
-
+    full_name: str = Field(min_length=2, max_length=200)
+    phone: str = Field(min_length=5, max_length=50)
+    city: str = Field(min_length=2, max_length=120)
+    budget_min: float = Field(ge=0)
+    budget_max: float = Field(ge=0)
+    asset_type: str = Field(min_length=2, max_length=80)
 
 class BuyerOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: int
     full_name: str
     phone: str
@@ -29,31 +28,23 @@ class BuyerOut(BaseModel):
     budget_min: float
     budget_max: float
     asset_type: str
-
-    class Config:
-        from_attributes = True
+    owner_id: int | None = None
 
 
-# =========================
-# DEAL
-# =========================
-
+# ---------- DEALS ----------
 class DealCreate(BaseModel):
-    title: str = Field(..., min_length=2)
-    city: str = Field(..., min_length=2)
-    asset_type: str = Field(..., min_length=2)
-    price: float = Field(..., gt=0)
-    description: str = Field(..., min_length=5)
-
+    title: str = Field(min_length=2, max_length=200)
+    city: str = Field(min_length=2, max_length=120)
+    asset_type: str = Field(min_length=2, max_length=80)
+    price: float = Field(gt=0)
+    description: str = Field(min_length=5)
 
 class DealOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
     id: int
     title: str
     city: str
     asset_type: str
     price: float
     description: str
-    matched_buyer_id: Optional[int]
-
-    class Config:
-        from_attributes = True
+    matched_buyer_id: int | None = None

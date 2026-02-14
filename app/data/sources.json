@@ -1,73 +1,23 @@
-import json
-import asyncio
-from pathlib import Path
-from datetime import datetime, timezone
-from sqlalchemy.ext.asyncio import AsyncSession
-
-from app.database import AsyncSessionLocal
-from app.services.ingest_engine import ingest_batch
-
-
-SOURCES_FILE = Path("app/data/sources.json")
-POLL_INTERVAL = 60  # seconds
-
-
-async def load_sources():
-    if not SOURCES_FILE.exists():
-        return {}
-
-    with open(SOURCES_FILE, "r") as f:
-        return json.load(f)
-
-
-async def simulate_fetch(asset_type: str, source_name: str):
-    """
-    Temporary simulation.
-    Later replace with real scraping/API calls.
-    """
-
-    now = datetime.now(timezone.utc).strftime("%H%M%S")
-
-    # simple price logic per category
-    base_price = {
-        "real_estate": 150000,
-        "cars": 20000,
-        "businesses": 120000,
-        "luxury_collectibles": 8000,
-        "equipment": 50000,
-    }.get(asset_type, 10000)
-
-    return [
-        {
-            "title": f"{source_name} Deal {now}",
-            "asset_type": asset_type,
-            "city": "Miami",
-            "price": base_price,
-            "arv": base_price * 1.4,
-            "repairs": base_price * 0.1,
-            "assignment_fee": base_price * 0.05,
-        }
-    ]
-
-
-async def poll_sources():
-    print("📡 Multi-Asset Source Poller Started")
-
-    while True:
-        try:
-            sources = await load_sources()
-
-            if not sources:
-                await asyncio.sleep(POLL_INTERVAL)
-                continue
-
-            async with AsyncSessionLocal() as db:  # type: AsyncSession
-                for asset_type, site_list in sources.items():
-                    for site in site_list:
-                        deals = await simulate_fetch(asset_type, site)
-                        await ingest_batch(db, deals)
-
-        except Exception as e:
-            print("❌ Source Poller Error:", e)
-
-        await asyncio.sleep(POLL_INTERVAL)
+{
+  "real_estate": [
+    "Zillow",
+    "Realtor.com",
+    "Redfin"
+  ],
+  "cars": [
+    "AutoTrader",
+    "Cars.com"
+  ],
+  "businesses": [
+    "BizBuySell",
+    "Flippa"
+  ],
+  "luxury_collectibles": [
+    "Chrono24",
+    "StockX"
+  ],
+  "equipment": [
+    "Ritchie Bros",
+    "IronPlanet"
+  ]
+}

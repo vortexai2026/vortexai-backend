@@ -1,3 +1,5 @@
+# app/routes/seller_calls.py
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.database import get_db
@@ -26,4 +28,4 @@ async def log_call(
     await db.commit()
     await db.refresh(call)
 
-    return {"message": "Call logged"}
+    return {"message": "Call logged successfully"}

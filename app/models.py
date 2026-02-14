@@ -1,7 +1,9 @@
 from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Float
 from sqlalchemy.orm import relationship
-from .database import Base
+from app.database import Base
 
+
+# ---------------- USERS ----------------
 class User(Base):
     __tablename__ = "users"
 
@@ -13,6 +15,7 @@ class User(Base):
     buyers = relationship("Buyer", back_populates="owner")
 
 
+# ---------------- BUYERS ----------------
 class Buyer(Base):
     __tablename__ = "buyers"
 
@@ -24,10 +27,13 @@ class Buyer(Base):
     budget_max = Column(Float)
     asset_type = Column(String)
 
-    owner_id = Column(Integer, ForeignKey("users.id"))
+    owner_id = Column(Integer, ForeignKey("users.id"), nullable=True)
     owner = relationship("User", back_populates="buyers")
 
+    deals = relationship("Deal", back_populates="matched_buyer")
 
+
+# ---------------- DEALS ----------------
 class Deal(Base):
     __tablename__ = "deals"
 
@@ -39,3 +45,4 @@ class Deal(Base):
     description = Column(String)
 
     matched_buyer_id = Column(Integer, ForeignKey("buyers.id"), nullable=True)
+    matched_buyer = relationship("Buyer", back_populates="deals")

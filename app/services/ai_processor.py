@@ -1,3 +1,4 @@
+# app/services/ai_processor.py
 from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,6 +8,7 @@ from app.models.buyer import Buyer
 from app.services.notifier import send_email
 from app.services.monetization import enforce_match_limit
 from app.services.ai_logger import log_ai_decision
+from app.services.ai_scoring import score_deal
 
 
 async def process_deal(db: AsyncSession, deal: Deal):
@@ -14,31 +16,28 @@ async def process_deal(db: AsyncSession, deal: Deal):
 
     try:
         # -------------------------
-        # 1️⃣ Expected Profit
+        # 1) Score deal (real scoring engine)
         # -------------------------
-        if deal.arv is not None and deal.repairs is not None:
-            deal.expected_profit = float(deal.arv) - float(deal.price) - float(deal.repairs)
-        else:
-            deal.expected_profit = 0.0
+        score = await score_deal(db, deal)
+
+        # Store score + decision on deal
+        deal.score = float(score.ai_score)
+        deal.ai_decision = score.decision
+
+        # Compute expected profit if needed (score_deal may compute best-effort)
+        # Keep it stored for admin/profit visibility
+        if getattr(deal, "expected_profit", None) is None or float(getattr(deal, "expected_profit", 0) or 0) == 0:
+            # best-effort: try calculate from fields
+            arv = float(getattr(deal, "arv", 0) or 0)
+            price = float(getattr(deal, "price", 0) or 0)
+            repairs = float(getattr(deal, "repairs", 0) or 0)
+            if arv > 0 and price > 0:
+                deal.expected_profit = arv - price - repairs
+            else:
+                deal.expected_profit = float(getattr(deal, "expected_profit", 0) or 0)
 
         # -------------------------
-        # 2️⃣ Scoring Logic
-        # -------------------------
-        if deal.expected_profit >= 30000:
-            deal.score = 95
-            deal.ai_decision = "match_buyer"
-        elif deal.expected_profit >= 15000:
-            deal.score = 80
-            deal.ai_decision = "match_buyer"
-        elif deal.expected_profit >= 5000:
-            deal.score = 60
-            deal.ai_decision = "review"
-        else:
-            deal.score = 30
-            deal.ai_decision = "reject"
-
-        # -------------------------
-        # 3️⃣ Buyer Matching
+        # 2) Decision -> matching
         # -------------------------
         if deal.ai_decision == "match_buyer":
             result = await db.execute(
@@ -49,9 +48,8 @@ async def process_deal(db: AsyncSession, deal: Deal):
                     Buyer.max_budget >= deal.price,
                     Buyer.is_active == True
                 )
-                .order_by(Buyer.tier.desc())
+                .order_by(Buyer.tier.desc(), Buyer.max_budget.desc())
             )
-
             buyer = result.scalars().first()
 
             if buyer:
@@ -68,8 +66,11 @@ async def process_deal(db: AsyncSession, deal: Deal):
                         <h2>New Deal Matched</h2>
                         <p><strong>{deal.title}</strong></p>
                         <p>City: {deal.city}</p>
+                        <p>Asset Type: {deal.asset_type}</p>
                         <p>Price: ${deal.price}</p>
                         <p>Expected Profit: ${deal.expected_profit}</p>
+                        <p>AI Score: {deal.score} / 100</p>
+                        <p>Confidence: {score.confidence:.0f}%</p>
                     """
                 )
             else:
@@ -77,23 +78,22 @@ async def process_deal(db: AsyncSession, deal: Deal):
 
         elif deal.ai_decision == "review":
             deal.status = "review"
-
         else:
             deal.status = "rejected"
 
         deal.updated_at = datetime.now(timezone.utc)
 
         # -------------------------
-        # 4️⃣ Log Success
+        # 3) Log success (audit)
         # -------------------------
         await log_ai_decision(
             db=db,
             deal_id=deal.id,
             buyer_id=(buyer.id if buyer else None),
-            decision=deal.ai_decision,
+            decision=f"{deal.ai_decision}|score={deal.score:.1f}|conf={score.confidence:.0f}",
             status=deal.status,
             score=float(deal.score or 0),
-            expected_profit=float(deal.expected_profit or 0),
+            expected_profit=float(getattr(deal, "expected_profit", 0) or 0),
             error=None,
         )
 
@@ -102,7 +102,15 @@ async def process_deal(db: AsyncSession, deal: Deal):
             "status": deal.status,
             "score": deal.score,
             "decision": deal.ai_decision,
-            "expected_profit": deal.expected_profit,
+            "confidence": score.confidence,
+            "expected_profit": getattr(deal, "expected_profit", 0),
+            "components": {
+                "profit": score.profit_score,
+                "risk": score.risk_score,
+                "demand": score.demand_score,
+                "liquidity": score.liquidity_score,
+                "urgency": score.urgency_score,
+            },
         }
 
     except Exception as e:

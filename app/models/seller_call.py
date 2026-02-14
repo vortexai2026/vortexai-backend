@@ -1,3 +1,5 @@
+# app/models/seller_call.py
+
 from sqlalchemy import Column, Integer, String, Text, DateTime, ForeignKey, Numeric
 from sqlalchemy.sql import func
 from app.database import Base

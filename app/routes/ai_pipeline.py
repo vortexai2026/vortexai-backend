@@ -4,7 +4,8 @@ from sqlalchemy import select
 from datetime import datetime, timezone
 
 from app.database import get_db
-from app.models import Deal, Buyer  # adjust only if your models are elsewhere
+from app.models.deal import Deal
+from app.models.buyer import Buyer
 
 
 router = APIRouter(prefix="/deals", tags=["AI Pipeline"])
@@ -54,7 +55,6 @@ async def ai_process_deal(deal_id: str, db: AsyncSession = Depends(get_db)):
 
     scores = score_deal_basic(deal)
 
-    # Try match buyer (simple example: first buyer in DB)
     matched_buyer_id = None
     if scores["ai_decision"] in ("match_buyer", "contact_seller"):
         buyer_result = await db.execute(select(Buyer))
@@ -62,7 +62,6 @@ async def ai_process_deal(deal_id: str, db: AsyncSession = Depends(get_db)):
         if buyer:
             matched_buyer_id = buyer.id
 
-    # Update deal
     for key, value in scores.items():
         if hasattr(deal, key):
             setattr(deal, key, value)

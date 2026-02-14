@@ -7,22 +7,21 @@ from app.database import get_db
 from app.models.deal import Deal
 from app.models.buyer import Buyer
 
-
 router = APIRouter()
 
 
-# ---------------------------------------
+# -------------------------------
 # LIST DEALS
-# ---------------------------------------
+# -------------------------------
 @router.get("/deals/", tags=["Deals"])
 async def list_deals(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Deal))
     return result.scalars().all()
 
 
-# ---------------------------------------
+# -------------------------------
 # CREATE DEAL
-# ---------------------------------------
+# -------------------------------
 @router.post("/deals/create", tags=["Deals"])
 async def create_deal(deal_data: dict, db: AsyncSession = Depends(get_db)):
     new_deal = Deal(**deal_data)
@@ -32,9 +31,9 @@ async def create_deal(deal_data: dict, db: AsyncSession = Depends(get_db)):
     return new_deal
 
 
-# ---------------------------------------
+# -------------------------------
 # AI PROCESS DEAL
-# ---------------------------------------
+# -------------------------------
 @router.post("/deals/{deal_id}/ai_process", tags=["AI Pipeline"])
 async def ai_process_deal(deal_id: str, db: AsyncSession = Depends(get_db)):
 
@@ -44,7 +43,6 @@ async def ai_process_deal(deal_id: str, db: AsyncSession = Depends(get_db)):
     if not deal:
         raise HTTPException(status_code=404, detail="Deal not found")
 
-    # ---- Simple AI scoring ----
     price = float(getattr(deal, "price", 0) or 0)
     arv = float(getattr(deal, "arv", 0) or 0)
     repairs = float(getattr(deal, "repairs", 0) or 0)
@@ -63,7 +61,6 @@ async def ai_process_deal(deal_id: str, db: AsyncSession = Depends(get_db)):
     if ai_score >= 75:
         decision = "contact_seller"
 
-    # ---- Optional buyer matching ----
     matched_buyer_id = None
     if decision in ("match_buyer", "contact_seller"):
         buyer_result = await db.execute(select(Buyer))
@@ -71,7 +68,6 @@ async def ai_process_deal(deal_id: str, db: AsyncSession = Depends(get_db)):
         if buyer:
             matched_buyer_id = buyer.id
 
-    # ---- Update deal if fields exist ----
     if hasattr(deal, "profit_score"):
         deal.profit_score = round(profit_score, 2)
 

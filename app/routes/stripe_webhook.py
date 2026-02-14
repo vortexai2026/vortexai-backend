@@ -1,54 +1,48 @@
-from fastapi import APIRouter, Request, HTTPException
-import stripe
 import os
-
+import stripe
+from datetime import datetime
+from fastapi import APIRouter, Request, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.database import AsyncSessionLocal
-from app.models.buyer import Buyer
+
+from app.database import get_db
+from app.models.deal import Deal
 
 router = APIRouter()
-
 stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
-WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
-
 
 @router.post("/stripe/webhook")
-async def stripe_webhook(request: Request):
+async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
+    webhook_secret = os.getenv("STRIPE_WEBHOOK_SECRET")
+
+    if not webhook_secret:
+        raise HTTPException(status_code=500, detail="STRIPE_WEBHOOK_SECRET missing")
 
     try:
-        event = stripe.Webhook.construct_event(
-            payload, sig_header, WEBHOOK_SECRET
-        )
-    except Exception:
-        raise HTTPException(status_code=400, detail="Invalid webhook")
+        event = stripe.Webhook.construct_event(payload, sig_header, webhook_secret)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Webhook error: {str(e)}")
 
-    # Handle subscription success
+    # We care about checkout completion
     if event["type"] == "checkout.session.completed":
-
         session = event["data"]["object"]
-        email = session.get("customer_email")
+        deal_id = session.get("metadata", {}).get("deal_id")
+        amount_total = session.get("amount_total")  # cents
+        payment_status = session.get("payment_status")  # paid / unpaid
 
-        # Example: map price ID to tier
-        line_items = stripe.checkout.Session.list_line_items(session["id"])
-        price_id = line_items["data"][0]["price"]["id"]
+        if deal_id:
+            r = await db.execute(select(Deal).where(Deal.id == int(deal_id)))
+            deal = r.scalar_one_or_none()
+            if deal:
+                deal.stripe_payment_status = "PAID" if payment_status == "paid" else "UNPAID"
+                deal.paid_amount = (amount_total / 100.0) if amount_total else None
+                deal.paid_at = datetime.utcnow()
 
-        tier_map = {
-            "price_pro_id": "pro",
-            "price_elite_id": "elite",
-        }
+                # Optional: If paid, you can move status to ASSIGNED (or keep ASSIGNED and just mark paid)
+                # deal.status = "ASSIGNED"
 
-        tier = tier_map.get(price_id)
+                await db.commit()
 
-        if tier and email:
-            async with AsyncSessionLocal() as db:
-                buyer = await db.scalar(
-                    select(Buyer).where(Buyer.email == email)
-                )
-                if buyer:
-                    buyer.tier = tier
-                    buyer.is_active = True
-                    await db.commit()
-
-    return {"status": "success"}
+    return {"received": True}

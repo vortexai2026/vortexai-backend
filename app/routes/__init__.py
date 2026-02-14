@@ -13,6 +13,7 @@ from .contracts import router as contracts_router
 from .ai_pipeline import router as ai_pipeline_router
 from .lifecycle import router as lifecycle_router
 from .admin import router as admin_router
+from .ai_logs import router as ai_logs_router
 
 router = APIRouter()
 
@@ -29,3 +30,5 @@ router.include_router(contracts_router)
 router.include_router(ai_pipeline_router)
 router.include_router(lifecycle_router)
 router.include_router(admin_router)
+router.include_router(ai_logs_router)
+

@@ -1,80 +1,84 @@
-# app/services/ai_scoring.py
-
-from __future__ import annotations
 from typing import Tuple, Optional
-
 from app.models.deal import Deal
 
 
-def _safe_float(x) -> Optional[float]:
-    try:
-        if x is None:
-            return None
-        return float(x)
-    except Exception:
-        return None
+DISTRESS_KEYWORDS = [
+    "foreclosure",
+    "pre-foreclosure",
+    "probate",
+    "estate sale",
+    "distressed",
+    "handyman",
+    "investor special",
+    "fixer",
+    "as-is",
+    "motivated",
+    "must sell",
+    "bring all offers",
+    "vacant",
+    "fire damage",
+    "water damage",
+    "needs tlc",
+    "cash only",
+    "price reduced",
+    "below market",
+]
+
+
+def contains_distress(text: str) -> bool:
+    if not text:
+        return False
+    text = text.lower()
+    return any(keyword in text for keyword in DISTRESS_KEYWORDS)
 
 
 def compute_expected_profit(deal: Deal) -> Optional[float]:
-    """
-    expected_profit = arv - price - repairs - assignment_fee
-    (only if we have enough fields)
-    """
-    arv = _safe_float(getattr(deal, "arv", None))
-    price = _safe_float(getattr(deal, "price", None))
-    repairs = _safe_float(getattr(deal, "repairs", None)) or 0.0
-    fee = _safe_float(getattr(deal, "assignment_fee", None)) or 0.0
-
-    if arv is None or price is None:
+    if not deal.arv or not deal.price:
         return None
 
-    return float(arv - price - repairs - fee)
+    repairs = deal.repairs or 0
+    fee = deal.assignment_fee or 0
+
+    return float(deal.arv - deal.price - repairs - fee)
 
 
 def score_deal(deal: Deal) -> Tuple[float, str]:
-    """
-    Returns (score 0-100, ai_decision)
-    Decision:
-      - ignore      (score < 40)
-      - review      (40-69)
-      - match_buyer (>= 70)
-    """
 
-    price = _safe_float(getattr(deal, "price", None)) or 0.0
+    if not deal.price or not deal.arv:
+        return 0.0, "ignore"
+
     expected_profit = compute_expected_profit(deal)
+    if expected_profit is None:
+        return 0.0, "ignore"
 
-    # Base score
-    score = 50.0
+    margin = expected_profit / max(deal.price, 1)
 
-    # Profit-based scoring (best signal)
-    if expected_profit is not None:
-        # Profit margin relative to price
-        margin = expected_profit / max(price, 1.0)
+    # 70% Rule Check
+    max_allowable_offer = (deal.arv * 0.70) - (deal.repairs or 0)
+    passes_70_rule = deal.price <= max_allowable_offer
 
-        # Map margin to score bumps
-        # 0% -> +0, 10% -> +10, 20% -> +20, 30% -> +30 (capped)
-        score += max(0.0, min(40.0, margin * 100.0))
+    # Distress detection
+    distress_hit = contains_distress(deal.title)
 
-        # Big penalty if negative profit
-        if expected_profit < 0:
-            score -= 40.0
-    else:
-        # If we don't know profit yet, keep it "meh"
-        score -= 10.0
+    # HARD FILTERS
+    if expected_profit < 30000:
+        return 20.0, "ignore"
 
-    # Small sanity adjustments
-    if price <= 0:
-        score = 0.0
+    if margin < 0.20:
+        return 25.0, "ignore"
 
-    # Clamp
-    score = max(0.0, min(100.0, score))
+    if not passes_70_rule:
+        return 30.0, "ignore"
 
-    # Decision
-    if score >= 70.0:
-        decision = "match_buyer"
-    elif score >= 40.0:
-        decision = "review"
-    else:
-        decision = "ignore"
+    # If passes everything:
+    score = 85.0
 
-    return score, decision
+    if distress_hit:
+        score += 10.0
+
+    if margin >= 0.30:
+        score += 5.0
+
+    score = min(score, 100.0)
+
+    return score, "match_buyer"

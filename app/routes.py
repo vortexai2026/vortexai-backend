@@ -1,125 +1,102 @@
 from fastapi import APIRouter, Depends, HTTPException
-from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from datetime import datetime, timezone
 
 from app.database import get_db
-from app import crud
-from app.auth import create_access_token, get_current_user
-from app.schemas import (
-    UserCreate, Token, UserOut,
-    BuyerCreate, BuyerOut,
-    DealCreate, DealOut,
-    SubscriptionSet, SubscriptionOut,
-    MatchResponse, MatchResult
-)
-from app.matching import rank_deals
+from app.models.deal import Deal
+from app.models.buyer import Buyer
+
 
 router = APIRouter()
 
 
-# --------------------
-# AUTH
-# --------------------
-@router.post("/auth/register", response_model=UserOut, tags=["Auth"])
-async def register(payload: UserCreate, db: AsyncSession = Depends(get_db)):
-    existing = await crud.get_user_by_email(db, payload.email)
-    if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
-
-    user = await crud.create_user(db, payload.email, payload.password)
-    return user
+# ---------------------------------------
+# LIST DEALS
+# ---------------------------------------
+@router.get("/deals/", tags=["Deals"])
+async def list_deals(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Deal))
+    return result.scalars().all()
 
 
-@router.post("/auth/login", response_model=Token, tags=["Auth"])
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
-    user = await crud.authenticate_user(db, form_data.username, form_data.password)
-    if not user:
-        raise HTTPException(status_code=401, detail="Invalid email or password")
-
-    token = create_access_token({"sub": str(user.id)})
-    return Token(access_token=token)
-
-
-# --------------------
-# BUYER PROFILE
-# --------------------
-@router.get("/buyers/me", response_model=BuyerOut, tags=["Buyers"])
-async def get_my_buyer(
-    db: AsyncSession = Depends(get_db),
-    user=Depends(get_current_user),
-):
-    buyer = await crud.get_buyer_by_user_id(db, user.id)
-    if not buyer:
-        raise HTTPException(status_code=404, detail="Buyer profile not found. Create it first.")
-    return buyer
+# ---------------------------------------
+# CREATE DEAL
+# ---------------------------------------
+@router.post("/deals/create", tags=["Deals"])
+async def create_deal(deal_data: dict, db: AsyncSession = Depends(get_db)):
+    new_deal = Deal(**deal_data)
+    db.add(new_deal)
+    await db.commit()
+    await db.refresh(new_deal)
+    return new_deal
 
 
-@router.post("/buyers/me", response_model=BuyerOut, tags=["Buyers"])
-async def create_or_update_my_buyer(
-    payload: BuyerCreate,
-    db: AsyncSession = Depends(get_db),
-    user=Depends(get_current_user),
-):
-    buyer = await crud.upsert_buyer_for_user(db, user.id, payload.model_dump())
-    return buyer
+# ---------------------------------------
+# AI PROCESS DEAL
+# ---------------------------------------
+@router.post("/deals/{deal_id}/ai_process", tags=["AI Pipeline"])
+async def ai_process_deal(deal_id: str, db: AsyncSession = Depends(get_db)):
 
+    result = await db.execute(select(Deal).where(Deal.id == deal_id))
+    deal = result.scalar_one_or_none()
 
-# --------------------
-# DEALS
-# --------------------
-@router.post("/deals", response_model=DealOut, tags=["Deals"])
-async def create_deal(payload: DealCreate, db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
-    deal = await crud.create_deal(db, payload.model_dump())
-    return deal
+    if not deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
 
+    # ---- Simple AI scoring ----
+    price = float(getattr(deal, "price", 0) or 0)
+    arv = float(getattr(deal, "arv", 0) or 0)
+    repairs = float(getattr(deal, "repairs", 0) or 0)
 
-@router.get("/deals", response_model=list[DealOut], tags=["Deals"])
-async def get_deals(db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
-    deals = await crud.list_deals(db, active_only=True, limit=200)
-    return deals
+    profit = max(arv - price - repairs, 0)
 
+    profit_score = min(100.0, (profit / 50000.0) * 100.0) if profit > 0 else 0.0
+    urgency_score = 50.0
+    risk_score = 30.0
 
-# --------------------
-# SUBSCRIPTIONS (Monetization Layer)
-# --------------------
-@router.get("/billing/me", response_model=SubscriptionOut, tags=["Billing"])
-async def my_subscription(db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
-    buyer = await crud.get_buyer_by_user_id(db, user.id)
-    if not buyer:
-        raise HTTPException(status_code=404, detail="Create buyer profile first (/buyers/me)")
+    ai_score = (profit_score * 0.6) + (urgency_score * 0.25) + ((100 - risk_score) * 0.15)
 
-    sub = await crud.ensure_subscription(db, buyer.id)
-    return sub
+    decision = "ignore"
+    if ai_score >= 60:
+        decision = "match_buyer"
+    if ai_score >= 75:
+        decision = "contact_seller"
 
+    # ---- Optional buyer matching ----
+    matched_buyer_id = None
+    if decision in ("match_buyer", "contact_seller"):
+        buyer_result = await db.execute(select(Buyer))
+        buyer = buyer_result.scalars().first()
+        if buyer:
+            matched_buyer_id = buyer.id
 
-@router.post("/billing/me/tier", response_model=SubscriptionOut, tags=["Billing"])
-async def set_my_tier(payload: SubscriptionSet, db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
-    buyer = await crud.get_buyer_by_user_id(db, user.id)
-    if not buyer:
-        raise HTTPException(status_code=404, detail="Create buyer profile first (/buyers/me)")
+    # ---- Update deal if fields exist ----
+    if hasattr(deal, "profit_score"):
+        deal.profit_score = round(profit_score, 2)
 
-    try:
-        sub = await crud.set_subscription_tier(db, buyer.id, payload.tier)
-    except ValueError as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    if hasattr(deal, "ai_score"):
+        deal.ai_score = round(ai_score, 2)
 
-    return sub
+    if hasattr(deal, "ai_decision"):
+        deal.ai_decision = decision
 
+    if hasattr(deal, "matched_buyer_id"):
+        deal.matched_buyer_id = matched_buyer_id
 
-# --------------------
-# MATCHING
-# --------------------
-@router.get("/matching/me", response_model=MatchResponse, tags=["Matching"])
-async def match_me(db: AsyncSession = Depends(get_db), user=Depends(get_current_user)):
-    buyer = await crud.get_buyer_by_user_id(db, user.id)
-    if not buyer:
-        raise HTTPException(status_code=404, detail="Create buyer profile first (/buyers/me)")
+    if hasattr(deal, "status"):
+        deal.status = "ai_processed"
 
-    deals = await crud.list_deals(db, active_only=True, limit=500)
-    ranked = rank_deals(buyer, deals)
+    if hasattr(deal, "ai_processed_at"):
+        deal.ai_processed_at = datetime.now(timezone.utc)
 
-    results = []
-    for deal, score in ranked[:50]:
-        results.append(MatchResult(deal=deal, score=score))
+    await db.commit()
 
-    return MatchResponse(buyer_id=buyer.id, results=results)
+    return {
+        "ok": True,
+        "deal_id": deal_id,
+        "profit_score": profit_score,
+        "ai_score": ai_score,
+        "decision": decision,
+        "matched_buyer_id": matched_buyer_id,
+    }

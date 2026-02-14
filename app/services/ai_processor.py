@@ -1,101 +1,78 @@
 from datetime import datetime, timezone
-from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models.deal import Deal
 from app.models.buyer import Buyer
-from app.services.monetization import ensure_monthly_reset, can_receive_match, consume_match
+from app.services.notifier import send_email
 
 
-async def process_deal(db: AsyncSession, deal: Deal) -> dict:
-    """
-    Processes one deal:
-    - score deal
-    - decide action
-    - enforce tier limits
-    - match buyer
-    - update lifecycle fields
-    """
+async def process_deal(db: AsyncSession, deal: Deal):
 
-    # --- score ---
-    price = float(deal.price or 0)
-    score = max(0.0, 100.0 - (price / 1000.0))
-    deal.score = round(score, 2)
+    # 1️⃣ Calculate expected profit
+    if deal.arv and deal.repairs:
+        deal.expected_profit = deal.arv - deal.price - deal.repairs
+    else:
+        deal.expected_profit = 0.0
 
-    # --- decision ---
-    decision = "ignore"
-    if deal.score >= 60:
-        decision = "match_buyer"
-    if deal.score >= 75:
-        decision = "contact_seller"
+    # 2️⃣ Simple AI scoring logic
+    if deal.expected_profit and deal.expected_profit > 20000:
+        deal.score = 90
+        deal.ai_decision = "match_buyer"
+    elif deal.expected_profit and deal.expected_profit > 10000:
+        deal.score = 70
+        deal.ai_decision = "review"
+    else:
+        deal.score = 40
+        deal.ai_decision = "reject"
 
-    deal.ai_decision = decision
-    deal.ai_processed_at = datetime.now(timezone.utc)
+    # 3️⃣ If AI says match → find buyer
+    if deal.ai_decision == "match_buyer":
 
-    # Ignore path
-    if decision == "ignore":
-        deal.status = "ai_processed"
-        deal.matched_buyer_id = None
-        return {
-            "deal_id": deal.id,
-            "decision": decision,
-            "score": deal.score,
-            "matched_buyer_id": None,
-            "status": deal.status,
-        }
+        result = await db.execute(
+            select(Buyer)
+            .where(
+                Buyer.asset_type == deal.asset_type,
+                Buyer.city == deal.city,
+                Buyer.max_budget >= deal.price,
+                Buyer.is_active == True
+            )
+            .order_by(Buyer.tier.desc())
+        )
 
-    # --- get buyers ---
-    buyers_res = await db.execute(select(Buyer).where(Buyer.is_active == True))
-    buyers = buyers_res.scalars().all()
+        buyer = result.scalars().first()
 
-    eligible = []
-    blocked = []
+        if buyer:
+            deal.matched_buyer_id = buyer.id
+            deal.status = "matched"
+            deal.ai_processed_at = datetime.now(timezone.utc)
 
-    for b in buyers:
-        ensure_monthly_reset(b)
+            # Increase buyer match counter
+            buyer.total_matches = (buyer.total_matches or 0) + 1
 
-        # preference filter
-        if b.asset_type != deal.asset_type:
-            continue
-        if b.city != deal.city:
-            continue
-        if float(b.max_budget or 0) < float(deal.price or 0):
-            continue
+            # ✅ Send email notification
+            await send_email(
+                to_email=buyer.email,
+                subject="🔥 New Deal Matched",
+                html_content=f"""
+                    <h2>New Deal Matched</h2>
+                    <p><strong>{deal.title}</strong></p>
+                    <p>City: {deal.city}</p>
+                    <p>Price: ${deal.price}</p>
+                    <p>Expected Profit: ${deal.expected_profit}</p>
+                """
+            )
 
-        ok, msg = can_receive_match(b)
-        if ok:
-            eligible.append(b)
         else:
-            blocked.append({"buyer_id": b.id, "tier": b.tier, "reason": msg})
+            deal.status = "no_match"
+    else:
+        deal.status = "rejected"
 
-    if not eligible:
-        deal.status = "ai_processed"
-        deal.matched_buyer_id = None
-        return {
-            "deal_id": deal.id,
-            "decision": decision,
-            "score": deal.score,
-            "matched_buyer_id": None,
-            "status": deal.status,
-            "blocked": blocked,
-        }
-
-    # pick best buyer (highest budget)
-    best = sorted(eligible, key=lambda x: float(x.max_budget or 0), reverse=True)[0]
-
-    # consume match (monetization enforcement)
-    consume_match(best)
-
-    # lifecycle
-    deal.matched_buyer_id = best.id
-    deal.status = "matched"
+    deal.updated_at = datetime.now(timezone.utc)
 
     return {
         "deal_id": deal.id,
-        "decision": decision,
-        "score": deal.score,
-        "matched_buyer_id": best.id,
         "status": deal.status,
-        "buyer_tier": best.tier,
-        "buyer_monthly_match_count": best.monthly_match_count,
+        "score": deal.score,
+        "decision": deal.ai_decision
     }

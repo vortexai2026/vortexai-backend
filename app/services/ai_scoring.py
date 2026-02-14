@@ -1,21 +1,25 @@
 from app.models.deal import Deal
 
-def apply_scoring(deal: Deal):
+DISTRESSED_KEYWORDS = [
+    "must sell",
+    "as-is",
+    "fixer",
+    "cash only",
+    "handyman",
+    "estate",
+    "vacant"
+]
 
-    distressed_keywords = [
-        "must sell",
-        "as-is",
-        "fixer",
-        "cash only",
-        "handyman",
-        "estate",
-        "vacant"
-    ]
+def score_deal(deal: Deal):
+    """
+    Main scoring function used by ai_processor.
+    Keeps compatibility with existing imports.
+    """
 
     text = (deal.title or "").lower()
 
     score = 0
-    for word in distressed_keywords:
+    for word in DISTRESSED_KEYWORDS:
         if word in text:
             score += 10
 

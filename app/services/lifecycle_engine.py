@@ -1,35 +1,32 @@
+from fastapi import HTTPException
 from datetime import datetime, timezone
+from app.models.deal import Deal
 
 
 ALLOWED_TRANSITIONS = {
-    "new": ["ai_processed", "dead"],
-    "ai_processed": ["matched", "dead"],
-    "matched": ["contacted", "dead"],
-    "contacted": ["under_contract", "dead"],
-    "under_contract": ["closed", "dead"],
+    "new": ["matched", "rejected"],
+    "matched": ["contacted", "closed", "cancelled"],
+    "contacted": ["closed", "cancelled"],
     "closed": [],
-    "dead": []
+    "rejected": [],
+    "cancelled": []
 }
 
 
 def validate_transition(current_status: str, new_status: str):
     allowed = ALLOWED_TRANSITIONS.get(current_status, [])
+
     if new_status not in allowed:
-        raise ValueError(
-            f"Invalid transition from '{current_status}' to '{new_status}'"
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid transition: {current_status} → {new_status}"
         )
 
 
-def apply_transition_side_effects(deal, new_status, buyer=None):
+def apply_transition(deal: Deal, new_status: str):
+    validate_transition(deal.status, new_status)
+
     deal.status = new_status
     deal.updated_at = datetime.now(timezone.utc)
 
-    if new_status == "matched" and buyer:
-        deal.matched_buyer_id = buyer.id
-        buyer.total_matches += 1
-
-    if new_status == "closed":
-        if deal.assignment_fee:
-            deal.actual_profit = deal.assignment_fee
-        if buyer:
-            buyer.total_deals_closed += 1
+    return deal

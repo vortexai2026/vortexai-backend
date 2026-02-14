@@ -1,23 +1,30 @@
 from fastapi import FastAPI
-from app.routes import router
-from app.database import engine, Base
+from .routes import router
+from .database import engine, Base
+import asyncio
 
-app = FastAPI(title="Vortex AI Backend")
+app = FastAPI(title="Vortex AI Backend", version="0.1.0")
 
+async def connect_db(retries=5, delay=2):
+    for attempt in range(1, retries + 1):
+        try:
+            async with engine.begin() as conn:
+                await conn.run_sync(Base.metadata.create_all)
+            print("✅ Tables created & DB ready")
+            return
+        except Exception as e:
+            print(f"❌ Attempt {attempt} DB failed: {e}")
+            if attempt < retries:
+                await asyncio.sleep(delay)
+            else:
+                raise
 
-# ---------------- DATABASE STARTUP ----------------
 @app.on_event("startup")
 async def startup_event():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    print("✅ Connected to Railway DB")
+    await connect_db()
 
-
-# ---------------- ROOT ----------------
-@app.get("/")
+@app.get("/", tags=["Root"])
 async def root():
     return {"message": "Vortex AI is running and DB is connected!"}
 
-
-# ---------------- INCLUDE ROUTERS ----------------
 app.include_router(router)

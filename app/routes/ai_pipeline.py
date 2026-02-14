@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 
 from app.database import get_db
 from app.models.deal import Deal
-from app.models.buyer import Buyer
 
 router = APIRouter(tags=["AI Pipeline"])
 
@@ -33,16 +32,9 @@ async def ai_process_deal(deal_id: str, db: AsyncSession = Depends(get_db)):
 
     decision = "ignore"
     if ai_score >= 60:
-        decision = "match_buyer"
+        decision = "review"
     if ai_score >= 75:
-        decision = "contact_seller"
-
-    matched_buyer_id = None
-    if decision in ("match_buyer", "contact_seller"):
-        buyer_result = await db.execute(select(Buyer))
-        buyer = buyer_result.scalars().first()
-        if buyer:
-            matched_buyer_id = buyer.id
+        decision = "high_priority"
 
     if hasattr(deal, "profit_score"):
         deal.profit_score = round(profit_score, 2)
@@ -52,9 +44,6 @@ async def ai_process_deal(deal_id: str, db: AsyncSession = Depends(get_db)):
 
     if hasattr(deal, "ai_decision"):
         deal.ai_decision = decision
-
-    if hasattr(deal, "matched_buyer_id"):
-        deal.matched_buyer_id = matched_buyer_id
 
     if hasattr(deal, "status"):
         deal.status = "ai_processed"
@@ -70,5 +59,4 @@ async def ai_process_deal(deal_id: str, db: AsyncSession = Depends(get_db)):
         "profit_score": profit_score,
         "ai_score": ai_score,
         "decision": decision,
-        "matched_buyer_id": matched_buyer_id,
     }

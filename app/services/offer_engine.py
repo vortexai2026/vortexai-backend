@@ -1,7 +1,8 @@
+# app/services/offer_engine.py
+
 def calculate_mao(arv: float, repairs: float, assignment_fee: float = 15000):
     """
-    MAO formula:
-    (ARV × 70%) – Repairs – Assignment Fee
+    MAO = (ARV × 70%) – Repairs – Assignment Fee
     """
 
     if not arv:

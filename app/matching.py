@@ -2,32 +2,40 @@ from typing import List, Tuple
 from app.models import Buyer, Deal
 
 
-def score_deal_for_buyer(buyer: Buyer, deal: Deal) -> float:
-    """
-    Simple scoring:
-    + city match
-    + asset type match
-    + price within budget
-    + more profit potential (if arv/repairs exist)
-    """
-    score = 0.0
+def calculate_profit_score(deal: Deal) -> float:
+    if deal.arv and deal.repairs:
+        profit = deal.arv - deal.repairs - deal.price
+        return max(min(profit / 1000, 100), 0)
+    return 20
 
-    if buyer.asset_type and deal.asset_type and buyer.asset_type == deal.asset_type:
+
+def calculate_urgency_score(deal: Deal) -> float:
+    if deal.source and "facebook" in deal.source.lower():
+        return 70
+    return 40
+
+
+def calculate_risk_score(deal: Deal) -> float:
+    if not deal.arv or not deal.repairs:
+        return 60
+    return 30
+
+
+def score_deal_for_buyer(buyer: Buyer, deal: Deal) -> float:
+    score = 0
+
+    if buyer.asset_type == deal.asset_type:
         score += 30
 
-    if buyer.city and deal.city and buyer.city.lower().strip() == deal.city.lower().strip():
+    if buyer.city and deal.city and buyer.city.lower() == deal.city.lower():
         score += 25
 
-    if deal.price >= buyer.min_budget and deal.price <= buyer.max_budget:
+    if buyer.min_budget <= deal.price <= buyer.max_budget:
         score += 30
     else:
-        # penalize if outside budget
         score -= 20
 
-    if deal.arv is not None and deal.repairs is not None:
-        profit = deal.arv - deal.repairs - deal.price
-        # Normalize a bit
-        score += max(min(profit / 1000.0, 30), -30)
+    score += calculate_profit_score(deal)
 
     return float(score)
 

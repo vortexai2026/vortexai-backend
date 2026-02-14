@@ -1,30 +1,39 @@
-# app/routes/deals.py
-from fastapi import APIRouter
-from app.db import database as db
+from fastapi import APIRouter, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
 
-router = APIRouter(tags=["Deals"])
+from app.database import get_db
+from app.models import Deal, Buyer
+from app.schemas import DealCreate, DealOut
 
-@router.post("/deals/create")
-async def create_deal(title: str, value: float):
-    query = "INSERT INTO deals(title, value) VALUES($1, $2)"
-    await db.execute(query, title, value)
-    return {"ok": True, "message": "Deal created"}
+router = APIRouter()
 
-@router.get("/deals")
-async def list_deals():
-    query = "SELECT * FROM deals"
-    deals = await db.fetch_all(query)
-    return {"ok": True, "deals": deals}
 
-@router.get("/deals/{deal_id}")
-async def get_deal(deal_id: int):
-    query = "SELECT * FROM deals WHERE id=$1"
-    deal = await db.fetch_one(query, deal_id)
-    return {"ok": True, "deal": deal}
+@router.post("/", response_model=DealOut)
+async def create_deal(deal: DealCreate, db: AsyncSession = Depends(get_db)):
+    new_deal = Deal(**deal.dict())
+    db.add(new_deal)
+    await db.commit()
+    await db.refresh(new_deal)
 
-@router.get("/deals/match/{deal_id}")
-async def match_buyers(deal_id: int):
-    # Placeholder matching logic
-    query = "SELECT * FROM buyers WHERE active=true"
-    buyers = await db.fetch_all(query)
-    return {"ok": True, "matched_buyers": buyers}
+    # Simple auto-match logic
+    result = await db.execute(select(Buyer))
+    buyers = result.scalars().all()
+
+    for buyer in buyers:
+        if (
+            buyer.city.lower() == deal.city.lower()
+            and buyer.asset_type.lower() == deal.asset_type.lower()
+            and buyer.budget_min <= deal.price <= buyer.budget_max
+        ):
+            new_deal.matched_buyer_id = buyer.id
+            await db.commit()
+            break
+
+    return new_deal
+
+
+@router.get("/", response_model=list[DealOut])
+async def get_deals(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Deal))
+    return result.scalars().all()

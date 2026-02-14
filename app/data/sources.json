@@ -1,23 +1,17 @@
-{
-  "real_estate": [
-    "Zillow",
-    "Realtor.com",
-    "Redfin"
-  ],
-  "cars": [
-    "AutoTrader",
-    "Cars.com"
-  ],
-  "businesses": [
-    "BizBuySell",
-    "Flippa"
-  ],
-  "luxury_collectibles": [
-    "Chrono24",
-    "StockX"
-  ],
-  "equipment": [
-    "Ritchie Bros",
-    "IronPlanet"
-  ]
-}
+[
+  {
+    "name": "Zillow",
+    "asset_type": "real_estate",
+    "city": "Toronto"
+  },
+  {
+    "name": "AutoTrader",
+    "asset_type": "cars",
+    "city": "Toronto"
+  },
+  {
+    "name": "BizBuySell",
+    "asset_type": "businesses",
+    "city": "Toronto"
+  }
+]

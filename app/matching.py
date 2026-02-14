@@ -1,17 +1,23 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from .crud import get_all_buyers
-from .models import Deal
+from sqlalchemy import select, and_
+from .models import Buyer, Deal
 
 async def match_buyers_to_deal(db: AsyncSession, deal: Deal):
-    buyers = await get_all_buyers(db)
-    for buyer in buyers:
-        if (
-            buyer.city.lower() == deal.city.lower()
-            and buyer.asset_type.lower() == deal.asset_type.lower()
-            and buyer.budget_min <= deal.price <= buyer.budget_max
-        ):
-            deal.matched_buyer_id = buyer.id
-            db.add(deal)
-            await db.commit()
-            await db.refresh(deal)
-            break
+    # Find buyers matching city + asset_type + price within budget range
+    q = select(Buyer).where(
+        and_(
+            Buyer.city == deal.city,
+            Buyer.asset_type == deal.asset_type,
+            Buyer.budget_min <= deal.price,
+            Buyer.budget_max >= deal.price,
+        )
+    )
+
+    result = await db.execute(q)
+    buyer = result.scalars().first()
+
+    if buyer:
+        deal.matched_buyer_id = buyer.id
+        db.add(deal)
+        await db.commit()
+        await db.refresh(deal)

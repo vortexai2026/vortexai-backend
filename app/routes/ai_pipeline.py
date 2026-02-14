@@ -7,11 +7,18 @@ from app.database import get_db
 from app.models.deal import Deal
 from app.models.buyer import Buyer
 
+router = APIRouter(tags=["AI Pipeline"])
 
-router = APIRouter(prefix="/deals", tags=["AI Pipeline"])
 
+@router.post("/deals/{deal_id}/ai_process")
+async def ai_process_deal(deal_id: str, db: AsyncSession = Depends(get_db)):
 
-def score_deal_basic(deal: Deal) -> dict:
+    result = await db.execute(select(Deal).where(Deal.id == deal_id))
+    deal = result.scalar_one_or_none()
+
+    if not deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+
     price = float(getattr(deal, "price", 0) or 0)
     arv = float(getattr(deal, "arv", 0) or 0)
     repairs = float(getattr(deal, "repairs", 0) or 0)
@@ -23,7 +30,6 @@ def score_deal_basic(deal: Deal) -> dict:
     risk_score = 30.0
 
     ai_score = (profit_score * 0.6) + (urgency_score * 0.25) + ((100 - risk_score) * 0.15)
-    confidence = 0.70
 
     decision = "ignore"
     if ai_score >= 60:
@@ -31,40 +37,21 @@ def score_deal_basic(deal: Deal) -> dict:
     if ai_score >= 75:
         decision = "contact_seller"
 
-    return {
-        "profit_score": round(profit_score, 2),
-        "urgency_score": round(urgency_score, 2),
-        "risk_score": round(risk_score, 2),
-        "ai_score": round(ai_score, 2),
-        "ai_confidence": round(confidence, 2),
-        "ai_decision": decision,
-    }
-
-
-@router.post("/{deal_id}/ai_process")
-async def ai_process_deal(deal_id: str, db: AsyncSession = Depends(get_db)):
-
-    result = await db.execute(select(Deal).where(Deal.id == deal_id))
-    deal = result.scalar_one_or_none()
-
-    if not deal:
-        raise HTTPException(status_code=404, detail="Deal not found")
-
-    if getattr(deal, "ai_processed_at", None):
-        return {"ok": True, "message": "Already processed"}
-
-    scores = score_deal_basic(deal)
-
     matched_buyer_id = None
-    if scores["ai_decision"] in ("match_buyer", "contact_seller"):
+    if decision in ("match_buyer", "contact_seller"):
         buyer_result = await db.execute(select(Buyer))
         buyer = buyer_result.scalars().first()
         if buyer:
             matched_buyer_id = buyer.id
 
-    for key, value in scores.items():
-        if hasattr(deal, key):
-            setattr(deal, key, value)
+    if hasattr(deal, "profit_score"):
+        deal.profit_score = round(profit_score, 2)
+
+    if hasattr(deal, "ai_score"):
+        deal.ai_score = round(ai_score, 2)
+
+    if hasattr(deal, "ai_decision"):
+        deal.ai_decision = decision
 
     if hasattr(deal, "matched_buyer_id"):
         deal.matched_buyer_id = matched_buyer_id
@@ -80,7 +67,8 @@ async def ai_process_deal(deal_id: str, db: AsyncSession = Depends(get_db)):
     return {
         "ok": True,
         "deal_id": deal_id,
+        "profit_score": profit_score,
+        "ai_score": ai_score,
+        "decision": decision,
         "matched_buyer_id": matched_buyer_id,
-        "scores": scores,
-        "status": getattr(deal, "status", None),
     }

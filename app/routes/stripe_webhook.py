@@ -1,6 +1,5 @@
 import os
-import json
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -14,7 +13,6 @@ router = APIRouter(tags=["Stripe Webhook"])
 STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY", "")
 STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET", "")
 
-# Price IDs (already in your Railway variables)
 PRICE_VIP = os.getenv("STRIPE_PRICE_VIP", "")
 PRICE_PRO = os.getenv("STRIPE_PRICE_PRO", "")
 PRICE_ELITE = os.getenv("STRIPE_PRICE_ELITE", "")
@@ -33,7 +31,7 @@ def tier_from_price_id(price_id: str) -> str:
 
 
 @router.post("/stripe/webhook")
-async def stripe_webhook(request: Request, db: AsyncSession = next(get_db())):
+async def stripe_webhook(request: Request, db: AsyncSession = Depends(get_db)):
     payload = await request.body()
     sig_header = request.headers.get("stripe-signature")
 
@@ -49,34 +47,31 @@ async def stripe_webhook(request: Request, db: AsyncSession = next(get_db())):
     except Exception as e:
         raise HTTPException(status_code=400, detail=f"Webhook error: {e}")
 
-    # We handle completed checkout sessions
-    if event["type"] == "checkout.session.completed":
-        session = event["data"]["object"]
+    if event["type"] != "checkout.session.completed":
+        return {"ok": True, "ignored_event": event["type"]}
 
-        buyer_email = session.get("customer_details", {}).get("email")
-        if not buyer_email:
-            return {"ok": True, "note": "No email in checkout session"}
+    session = event["data"]["object"]
 
-        # fetch line items to see what was purchased
-        line_items = stripe.checkout.Session.list_line_items(session["id"], limit=5)
-        if not line_items or not line_items["data"]:
-            return {"ok": True, "note": "No line items found"}
+    buyer_email = (session.get("customer_details") or {}).get("email")
+    if not buyer_email:
+        return {"ok": True, "note": "No email in checkout session"}
 
-        price_id = line_items["data"][0]["price"]["id"]
-        new_tier = tier_from_price_id(price_id)
+    line_items = stripe.checkout.Session.list_line_items(session["id"], limit=5)
+    if not line_items or not line_items.get("data"):
+        return {"ok": True, "note": "No line items found"}
 
-        # find buyer by email
-        res = await db.execute(select(Buyer).where(Buyer.email == buyer_email))
-        buyer = res.scalar_one_or_none()
+    price_id = line_items["data"][0]["price"]["id"]
+    new_tier = tier_from_price_id(price_id)
 
-        if not buyer:
-            return {"ok": True, "note": f"No buyer found for email {buyer_email}"}
+    res = await db.execute(select(Buyer).where(Buyer.email == buyer_email))
+    buyer = res.scalar_one_or_none()
 
-        buyer.tier = new_tier
-        buyer.is_active = True
+    if not buyer:
+        return {"ok": True, "note": f"No buyer found for email {buyer_email}"}
 
-        await db.commit()
+    buyer.tier = new_tier
+    buyer.is_active = True
 
-        return {"ok": True, "buyer_email": buyer_email, "tier": new_tier}
+    await db.commit()
 
-    return {"ok": True, "ignored_event": event["type"]}
+    return {"ok": True, "buyer_email": buyer_email, "tier": new_tier}

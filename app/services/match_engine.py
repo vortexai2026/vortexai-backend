@@ -1,29 +1,47 @@
-from app.db import db
+# app/services/match_engine.py
+
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from app.models.deal import Deal
+from app.models.buyer import Buyer
 
 
-def match_existing_deals_to_buyer(buyer_id):
-    buyer = db.fetch_one(
-        "SELECT * FROM buyers WHERE id = :id",
-        {"id": buyer_id}
+async def match_deal_to_buyer(
+    db: AsyncSession,
+    deal: Deal,
+) -> bool:
+    """
+    Match a newly created deal to the first eligible buyer.
+    Returns True if matched, False otherwise.
+    """
+
+    if deal.status != "new":
+        return False
+
+    # Find eligible buyers
+    result = await db.execute(
+        select(Buyer).where(
+            Buyer.asset_type == deal.asset_type,
+            Buyer.city == deal.city,
+            Buyer.max_budget >= deal.price,
+            Buyer.is_active == True,
+        )
     )
 
-    deals = db.fetch_all("""
-      SELECT * FROM deals
-      WHERE asset_type = ANY(:asset_types)
-        AND location = ANY(:cities)
-        AND price BETWEEN :min_price AND :max_price
-    """, {
-        "asset_types": buyer["asset_types"],
-        "cities": buyer["cities"],
-        "min_price": buyer["min_price"],
-        "max_price": buyer["max_price"]
-    })
+    buyers = result.scalars().all()
 
-    for deal in deals:
-        db.execute("""
-          INSERT INTO deal_matches (deal_id,buyer_id,score)
-          VALUES (:deal_id,:buyer_id,85)
-        """, {
-            "deal_id": deal["id"],
-            "buyer_id": buyer_id
-        })
+    if not buyers:
+        return False
+
+    # Take first buyer (later we can improve prioritization)
+    buyer = buyers[0]
+
+    # Update deal
+    deal.status = "matched"
+    deal.matched_buyer_id = buyer.id
+
+    # Update buyer stats
+    buyer.total_matches += 1
+
+    return True

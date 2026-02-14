@@ -1,29 +1,24 @@
-# app/routes/buyers.py
-from fastapi import APIRouter
-from app.db import database as db
+from fastapi import APIRouter, Depends, HTTPException
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.future import select
+
+from app.database import get_db
+from app.models import Buyer
+from app.schemas import BuyerCreate, BuyerOut
 
 router = APIRouter(tags=["Buyers"])
 
-@router.post("/create")
-async def create_buyer(name: str, email: str):
-    query = "INSERT INTO buyers(name, email) VALUES($1, $2)"
-    await db.execute(query, name, email)
-    return {"ok": True, "message": "Buyer created"}
 
-@router.get("/")
-async def list_buyers():
-    query = "SELECT * FROM buyers"
-    buyers = await db.fetch_all(query)
-    return {"ok": True, "buyers": buyers}
+@router.post("/buyers", response_model=BuyerOut)
+async def create_buyer(buyer: BuyerCreate, db: AsyncSession = Depends(get_db)):
+    new_buyer = Buyer(**buyer.dict())
+    db.add(new_buyer)
+    await db.commit()
+    await db.refresh(new_buyer)
+    return new_buyer
 
-@router.get("/{buyer_id}")
-async def get_buyer(buyer_id: int):
-    query = "SELECT * FROM buyers WHERE id=$1"
-    buyer = await db.fetch_one(query, buyer_id)
-    return {"ok": True, "buyer": buyer}
 
-@router.post("/disable/{buyer_id}")
-async def disable_buyer(buyer_id: int):
-    query = "UPDATE buyers SET active=false WHERE id=$1"
-    await db.execute(query, buyer_id)
-    return {"ok": True, "message": "Buyer disabled"}
+@router.get("/buyers", response_model=list[BuyerOut])
+async def get_buyers(db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(Buyer))
+    return result.scalars().all()

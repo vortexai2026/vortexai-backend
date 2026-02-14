@@ -8,6 +8,7 @@ from .ingest import router as ingest_router
 from .outreach import router as outreach_router
 from .sources import router as sources_router
 from .stripe import router as stripe_router
+from .pdf import router as pdf_router
 
 router = APIRouter()
 
@@ -19,4 +20,4 @@ router.include_router(ingest_router)
 router.include_router(outreach_router)
 router.include_router(sources_router)
 router.include_router(stripe_router)
-
+router.include_router(pdf_router)

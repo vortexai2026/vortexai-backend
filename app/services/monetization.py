@@ -10,21 +10,39 @@ TIER_LIMITS = {
 }
 
 
-def enforce_match_limit(buyer: Buyer):
-
+def ensure_monthly_reset(buyer: Buyer):
     now = datetime.now(timezone.utc)
 
-    # Reset monthly counter if needed
-    if buyer.monthly_match_reset_at is None or buyer.monthly_match_reset_at.month != now.month:
+    if (
+        buyer.monthly_match_reset_at is None
+        or buyer.monthly_match_reset_at.month != now.month
+        or buyer.monthly_match_reset_at.year != now.year
+    ):
         buyer.monthly_match_count = 0
         buyer.monthly_match_reset_at = now
 
+
+def can_receive_match(buyer: Buyer):
     limit = TIER_LIMITS.get(buyer.tier, 0)
 
-    if limit is not None and buyer.monthly_match_count >= limit:
+    if limit is None:
+        return True
+
+    return (buyer.monthly_match_count or 0) < limit
+
+
+def consume_match(buyer: Buyer):
+    buyer.monthly_match_count = (buyer.monthly_match_count or 0) + 1
+    buyer.total_matches = (buyer.total_matches or 0) + 1
+
+
+def enforce_match_limit(buyer: Buyer):
+    ensure_monthly_reset(buyer)
+
+    if not can_receive_match(buyer):
         raise HTTPException(
             status_code=403,
             detail=f"Monthly match limit reached for tier: {buyer.tier}"
         )
 
-    buyer.monthly_match_count += 1
+    consume_match(buyer)

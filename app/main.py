@@ -2,8 +2,7 @@ from fastapi import FastAPI
 import asyncio
 
 from app.database import engine, Base
-from app.routes import router as main_router
-from app.routes.ai_pipeline import router as ai_pipeline_router
+from app.routes import router
 
 app = FastAPI(title="Vortex AI Backend", version="1.0.0")
 
@@ -33,5 +32,4 @@ async def root():
     return {"message": "Vortex AI is running and DB is connected!"}
 
 
-app.include_router(main_router)
-app.include_router(ai_pipeline_router)
+app.include_router(router)

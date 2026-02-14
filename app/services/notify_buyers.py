@@ -1,17 +1,47 @@
-# app/notify_buyers.py
-from app.emailer import send_email
+import os
+import asyncio
+import httpx
 
-def notify_buyers(deal, buyers):
-    for buyer in buyers:
-        subject = "🔥 New Deal Matches Your Criteria"
-        body = f"""
-Deal Found:
+BREVO_API_KEY = os.getenv("BREVO_API_KEY")
+FROM_EMAIL = os.getenv("FROM_EMAIL", "no-reply@vortexai.com")
+FROM_NAME = os.getenv("FROM_NAME", "Vortex AI")
 
-Title: {deal['title']}
-Price: {deal['price']}
-Location: {deal['location']}
-Link: {deal['url']}
 
-Reply YES if interested.
-"""
-        send_email(subject, body, buyer["email"])
+async def send_email(to_email: str, subject: str, html_content: str):
+    """
+    Sends email using Brevo (Sendinblue) API.
+    If no API key is set, it will safely skip sending (no crash).
+    """
+
+    if not BREVO_API_KEY:
+        # Safe fallback (dev mode)
+        print(f"[EMAIL SKIPPED] → {to_email} | {subject}")
+        return
+
+    url = "https://api.brevo.com/v3/smtp/email"
+
+    payload = {
+        "sender": {
+            "name": FROM_NAME,
+            "email": FROM_EMAIL
+        },
+        "to": [
+            {"email": to_email}
+        ],
+        "subject": subject,
+        "htmlContent": html_content
+    }
+
+    headers = {
+        "accept": "application/json",
+        "api-key": BREVO_API_KEY,
+        "content-type": "application/json"
+    }
+
+    async with httpx.AsyncClient() as client:
+        response = await client.post(url, json=payload, headers=headers)
+
+        if response.status_code >= 400:
+            print("❌ Email failed:", response.text)
+        else:
+            print("✅ Email sent:", to_email)

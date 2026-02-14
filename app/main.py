@@ -3,6 +3,8 @@ import asyncio
 
 from app.database import engine, Base
 from app.routes import router
+from app.worker.autonomous_worker import run_worker
+
 
 app = FastAPI(title="Vortex AI Backend", version="1.0.0")
 
@@ -26,10 +28,14 @@ async def connect_db(retries=5, delay=2):
 async def startup_event():
     await connect_db()
 
+    # 🚀 Start autonomous AI worker
+    asyncio.create_task(run_worker())
+    print("🤖 Autonomous Worker Started")
+
 
 @app.get("/", tags=["Root"])
 async def root():
-    return {"message": "Vortex AI is running and DB is connected!"}
+    return {"message": "Vortex AI Autonomous Operator Running"}
 
 
 app.include_router(router)

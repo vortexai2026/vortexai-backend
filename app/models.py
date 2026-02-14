@@ -1,6 +1,7 @@
+# app/models.py
 from datetime import datetime
 from sqlalchemy import (
-    Column, Integer, String, DateTime, Float, Boolean, ForeignKey, Text, UniqueConstraint
+    Column, Integer, String, DateTime, Float, Boolean, ForeignKey, Text, UniqueConstraint, Index
 )
 from sqlalchemy.orm import relationship
 
@@ -13,7 +14,6 @@ class User(Base):
     id = Column(Integer, primary_key=True)
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
-
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
@@ -35,6 +35,7 @@ class Buyer(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     user = relationship("User")
+    matched_deals = relationship("Deal", back_populates="matched_buyer")
 
 
 class Deal(Base):
@@ -53,8 +54,31 @@ class Deal(Base):
     source = Column(String(120), nullable=True)
     description = Column(Text, nullable=True)
 
+    # ✅ AI scoring (persisted)
+    profit_score = Column(Float, default=0.0, nullable=False)
+    urgency_score = Column(Float, default=0.0, nullable=False)
+    risk_score = Column(Float, default=0.0, nullable=False)
+    ai_score = Column(Float, default=0.0, nullable=False)
+
+    # ✅ AI decision + lifecycle
+    ai_decision = Column(String(50), default="unscored", nullable=False)  # ignore/review/contact_seller/notify_buyers
+    status = Column(String(50), default="new", nullable=False)            # new/scored/review/contacted/matched/under_contract/sold/dead
+
+    # ✅ money tracking
+    profit_realized = Column(Float, nullable=True)
+
+    # ✅ who this deal is matched to
+    matched_buyer_id = Column(Integer, ForeignKey("buyers.id", ondelete="SET NULL"), nullable=True)
+    matched_buyer = relationship("Buyer", back_populates="matched_deals")
+
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
+
+
+# helpful indexes
+Index("ix_deals_asset_city_price", Deal.asset_type, Deal.city, Deal.price)
+Index("ix_deals_status", Deal.status)
+Index("ix_deals_ai_score", Deal.ai_score)
 
 
 class Subscription(Base):

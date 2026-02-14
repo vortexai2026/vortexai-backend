@@ -1,50 +1,109 @@
-from pydantic import BaseModel, Field, ConfigDict
+from typing import Optional, List
+from pydantic import BaseModel, EmailStr, Field
 
-# ---------- USERS ----------
+
+# --------------------
+# AUTH
+# --------------------
 class UserCreate(BaseModel):
-    email: str
-    password: str
-
-class UserLogin(BaseModel):
-    email: str
-    password: str
+    email: EmailStr
+    password: str = Field(min_length=6)
 
 
-# ---------- BUYERS ----------
+class Token(BaseModel):
+    access_token: str
+    token_type: str = "bearer"
+
+
+class UserOut(BaseModel):
+    id: int
+    email: EmailStr
+
+    class Config:
+        from_attributes = True
+
+
+# --------------------
+# BUYERS
+# --------------------
 class BuyerCreate(BaseModel):
-    full_name: str = Field(min_length=2, max_length=200)
-    phone: str = Field(min_length=5, max_length=50)
-    city: str = Field(min_length=2, max_length=120)
-    budget_min: float = Field(ge=0)
-    budget_max: float = Field(ge=0)
-    asset_type: str = Field(min_length=2, max_length=80)
+    full_name: Optional[str] = None
+    phone: Optional[str] = None
+    asset_type: str = "real_estate"
+    city: Optional[str] = None
+    min_budget: float = 0.0
+    max_budget: float = 999999999.0
+
 
 class BuyerOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
     id: int
-    full_name: str
-    phone: str
-    city: str
-    budget_min: float
-    budget_max: float
+    user_id: int
+    full_name: Optional[str]
+    phone: Optional[str]
     asset_type: str
-    owner_id: int | None = None
+    city: Optional[str]
+    min_budget: float
+    max_budget: float
+
+    class Config:
+        from_attributes = True
 
 
-# ---------- DEALS ----------
+# --------------------
+# DEALS
+# --------------------
 class DealCreate(BaseModel):
-    title: str = Field(min_length=2, max_length=200)
-    city: str = Field(min_length=2, max_length=120)
-    asset_type: str = Field(min_length=2, max_length=80)
-    price: float = Field(gt=0)
-    description: str = Field(min_length=5)
+    title: str
+    asset_type: str = "real_estate"
+    city: Optional[str] = None
+    price: float
+    arv: Optional[float] = None
+    repairs: Optional[float] = None
+    source: Optional[str] = None
+    description: Optional[str] = None
+
 
 class DealOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
     id: int
     title: str
-    city: str
     asset_type: str
+    city: Optional[str]
     price: float
-    description: str
-    matched_buyer_id: int | None = None
+    arv: Optional[float]
+    repairs: Optional[float]
+    source: Optional[str]
+    description: Optional[str]
+    is_active: bool
+
+    class Config:
+        from_attributes = True
+
+
+# --------------------
+# SUBSCRIPTION
+# --------------------
+class SubscriptionSet(BaseModel):
+    tier: str = Field(description="free | pro | elite")
+
+
+class SubscriptionOut(BaseModel):
+    id: int
+    buyer_id: int
+    tier: str
+    active: bool
+
+    class Config:
+        from_attributes = True
+
+
+# --------------------
+# MATCHING
+# --------------------
+class MatchResult(BaseModel):
+    deal: DealOut
+    score: float
+
+
+class MatchResponse(BaseModel):
+    buyer_id: int
+    results: List[MatchResult]

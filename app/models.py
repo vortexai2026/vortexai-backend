@@ -1,33 +1,49 @@
-# app/models.py
 from datetime import datetime
+import uuid
+
 from sqlalchemy import (
-    Column, Integer, String, DateTime, Float, Boolean, ForeignKey, Text, UniqueConstraint, Index
+    Column,
+    String,
+    DateTime,
+    Float,
+    Boolean,
+    ForeignKey,
+    Text,
+    UniqueConstraint,
 )
+from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import relationship
 
 from app.database import Base
 
 
+# =============================
+# USERS
+# =============================
 class User(Base):
     __tablename__ = "users"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email = Column(String(255), unique=True, index=True, nullable=False)
     hashed_password = Column(String(255), nullable=False)
+
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
 
+# =============================
+# BUYERS
+# =============================
 class Buyer(Base):
     __tablename__ = "buyers"
 
-    id = Column(Integer, primary_key=True)
-    user_id = Column(Integer, ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True, nullable=False)
 
     full_name = Column(String(200), nullable=True)
     phone = Column(String(50), nullable=True)
 
     # Preferences
-    asset_type = Column(String(50), default="real_estate", nullable=False)  # real_estate, cars, etc
+    asset_type = Column(String(50), default="real_estate", nullable=False)
     city = Column(String(120), nullable=True)
     min_budget = Column(Float, default=0.0, nullable=False)
     max_budget = Column(Float, default=999999999.0, nullable=False)
@@ -35,63 +51,69 @@ class Buyer(Base):
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
     user = relationship("User")
-    matched_deals = relationship("Deal", back_populates="matched_buyer")
 
 
+# =============================
+# DEALS (AI UPGRADED)
+# =============================
 class Deal(Base):
     __tablename__ = "deals"
 
-    id = Column(Integer, primary_key=True)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
 
     title = Column(String(200), nullable=False)
     asset_type = Column(String(50), default="real_estate", nullable=False)
     city = Column(String(120), nullable=True)
 
     price = Column(Float, nullable=False)
-    arv = Column(Float, nullable=True)          # after repair value (optional)
-    repairs = Column(Float, nullable=True)      # repairs estimate (optional)
+    arv = Column(Float, nullable=True)
+    repairs = Column(Float, nullable=True)
 
     source = Column(String(120), nullable=True)
     description = Column(Text, nullable=True)
 
-    # ✅ AI scoring (persisted)
-    profit_score = Column(Float, default=0.0, nullable=False)
-    urgency_score = Column(Float, default=0.0, nullable=False)
-    risk_score = Column(Float, default=0.0, nullable=False)
-    ai_score = Column(Float, default=0.0, nullable=False)
+    # -------------------------
+    # AI SCORING FIELDS
+    # -------------------------
+    profit_score = Column(Float, default=0)
+    urgency_score = Column(Float, default=0)
+    risk_score = Column(Float, default=0)
+    ai_score = Column(Float, default=0)
 
-    # ✅ AI decision + lifecycle
-    ai_decision = Column(String(50), default="unscored", nullable=False)  # ignore/review/contact_seller/notify_buyers
-    status = Column(String(50), default="new", nullable=False)            # new/scored/review/contacted/matched/under_contract/sold/dead
+    ai_decision = Column(String(50), nullable=True)
 
-    # ✅ money tracking
+    # -------------------------
+    # LIFECYCLE
+    # -------------------------
+    status = Column(String(50), default="new")  
+    # new / contacted / matched / under_contract / sold / dead
+
     profit_realized = Column(Float, nullable=True)
 
-    # ✅ who this deal is matched to
-    matched_buyer_id = Column(Integer, ForeignKey("buyers.id", ondelete="SET NULL"), nullable=True)
-    matched_buyer = relationship("Buyer", back_populates="matched_deals")
+    matched_buyer_id = Column(
+        UUID(as_uuid=True),
+        ForeignKey("buyers.id", ondelete="SET NULL"),
+        nullable=True,
+    )
 
     is_active = Column(Boolean, default=True, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow, nullable=False)
 
-
-# helpful indexes
-Index("ix_deals_asset_city_price", Deal.asset_type, Deal.city, Deal.price)
-Index("ix_deals_status", Deal.status)
-Index("ix_deals_ai_score", Deal.ai_score)
+    matched_buyer = relationship("Buyer")
 
 
+# =============================
+# SUBSCRIPTIONS
+# =============================
 class Subscription(Base):
     __tablename__ = "subscriptions"
     __table_args__ = (UniqueConstraint("buyer_id", name="uq_subscription_buyer_id"),)
 
-    id = Column(Integer, primary_key=True)
-    buyer_id = Column(Integer, ForeignKey("buyers.id", ondelete="CASCADE"), nullable=False)
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    buyer_id = Column(UUID(as_uuid=True), ForeignKey("buyers.id", ondelete="CASCADE"), nullable=False)
 
-    # Free / Pro / Elite
     tier = Column(String(20), default="free", nullable=False)
 
-    # Optional Stripe fields (you can wire later)
     stripe_customer_id = Column(String(120), nullable=True)
     stripe_subscription_id = Column(String(120), nullable=True)
 

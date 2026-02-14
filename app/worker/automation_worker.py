@@ -1,9 +1,8 @@
 import os
 import asyncio
 from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.database import AsyncSessionLocal  # must exist in your database.py
+from app.database import AsyncSessionLocal
 from app.models.deal import Deal
 from app.services.ai_processor import process_deal
 
@@ -12,20 +11,19 @@ SLEEP_SECONDS = int(os.getenv("SLEEP_SECONDS", "10"))
 BATCH_SIZE = int(os.getenv("WORKER_BATCH_SIZE", "10"))
 
 
-async def fetch_new_deals(db: AsyncSession):
-    # Only deals not processed yet
-    res = await db.execute(
+async def fetch_new_deals(db):
+    result = await db.execute(
         select(Deal)
         .where(Deal.status == "new")
         .order_by(Deal.created_at.asc())
         .limit(BATCH_SIZE)
     )
-    return res.scalars().all()
+    return result.scalars().all()
 
 
 async def worker_loop():
-    print("🤖 Vortex AI Worker started")
-    print(f"⏱ sleep={SLEEP_SECONDS}s batch={BATCH_SIZE}")
+    print("🤖 Vortex AI Automation Worker Started")
+    print(f"⏱ Poll interval: {SLEEP_SECONDS}s | Batch size: {BATCH_SIZE}")
 
     while True:
         try:
@@ -33,7 +31,7 @@ async def worker_loop():
                 deals = await fetch_new_deals(db)
 
                 if not deals:
-                    print("✅ No new deals. sleeping...")
+                    print("🟢 No new deals found")
                     await asyncio.sleep(SLEEP_SECONDS)
                     continue
 
@@ -43,14 +41,13 @@ async def worker_loop():
                     try:
                         result = await process_deal(db, deal)
                         await db.commit()
-                        print(f"✅ processed deal {deal.id}: {result.get('status')} decision={result.get('decision')}")
+                        print(f"✅ Deal {deal.id} processed → {result.get('status')}")
                     except Exception as e:
                         await db.rollback()
-                        # mark dead only if you want; for now just log
-                        print(f"❌ deal {deal.id} failed: {e}")
+                        print(f"❌ Failed processing deal {deal.id}: {e}")
 
         except Exception as e:
-            print(f"🔥 Worker loop error: {e}")
+            print(f"🔥 Worker Loop Error: {e}")
 
         await asyncio.sleep(SLEEP_SECONDS)
 

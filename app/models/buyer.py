@@ -15,7 +15,12 @@ class Buyer(Base):
     city = Column(String, nullable=False)
     max_budget = Column(Float, nullable=False)
 
+    # Monetization tier
     tier = Column(String, default="free")  # free, pro, elite
     is_active = Column(Boolean, default=True)
+
+    # Admin / intelligence
+    total_matches = Column(Integer, default=0)
+    total_deals_closed = Column(Integer, default=0)
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())

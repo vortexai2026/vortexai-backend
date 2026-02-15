@@ -1,45 +1,23 @@
+# app/worker/autonomous_worker.py
+
+import os
 import asyncio
-from datetime import datetime, timezone
+from app.database import async_session_maker
+from app.services.execution_pipeline import run_autonomous_cycle
 
-from sqlalchemy import select
-from sqlalchemy.ext.asyncio import AsyncSession
+CYCLE_LIMIT = int(os.getenv("AUTO_CYCLE_LIMIT", "10"))
+RUN_ON_STARTUP = os.getenv("AUTO_RUN_ON_STARTUP", "false").lower() == "true"
 
-from app.database import AsyncSessionLocal
-from app.models.deal import Deal
-from app.services.ai_processor import process_deal
+async def run_once():
+    async with async_session_maker() as db:
+        return await run_autonomous_cycle(db, limit=CYCLE_LIMIT)
 
+def run_worker():
+    """
+    Safe entry point if you want to call it from main.py or a separate worker container.
+    """
+    return asyncio.run(run_once())
 
-POLL_INTERVAL = 10  # seconds
-
-
-async def run_worker():
-    while True:
-        try:
-            async with AsyncSessionLocal() as db:
-                await process_pending_deals(db)
-        except Exception as e:
-            print(f"[WORKER ERROR] {e}")
-
-        await asyncio.sleep(POLL_INTERVAL)
-
-
-async def process_pending_deals(db: AsyncSession):
-    result = await db.execute(
-        select(Deal).where(
-            Deal.status.in_(["new", "review", None])
-        )
-    )
-
-    deals = result.scalars().all()
-
-    for deal in deals:
-        try:
-            print(f"[WORKER] Processing deal {deal.id}")
-
-            await process_deal(db, deal)
-
-            await db.commit()
-
-        except Exception as e:
-            print(f"[WORKER] Deal {deal.id} failed: {e}")
-            await db.rollback()
+# Optional: if you have a worker container that just runs this file
+if __name__ == "__main__":
+    asyncio.run(run_once())

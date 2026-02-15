@@ -1,9 +1,24 @@
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
-from app.models.deal import Deal
-from datetime import datetime
+from sqlalchemy.ext.asyncio import AsyncSession
 
-# ... inside log_call() before commit:
-deal_res = await db.execute(select(Deal).where(Deal.id == deal_id))
-deal = deal_res.scalar_one_or_none()
-if deal:
-    deal.last_contacted_at = datetime.utcnow()
+from app.database import get_db
+from app.models import Deal
+
+router = APIRouter(prefix="/seller-calls", tags=["Seller Calls"])
+
+
+@router.get("/{deal_id}")
+async def get_deal(deal_id: int, db: AsyncSession = Depends(get_db)):
+
+    # ✅ await is inside async function
+    result = await db.execute(
+        select(Deal).where(Deal.id == deal_id)
+    )
+
+    deal = result.scalar_one_or_none()
+
+    if not deal:
+        raise HTTPException(status_code=404, detail="Deal not found")
+
+    return deal

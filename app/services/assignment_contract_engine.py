@@ -1,19 +1,14 @@
-from datetime import datetime
+# app/services/assignment_engine.py
 
-def generate_assignment_contract(deal, buyer):
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.deal import Deal
+from app.services.lifecycle_control import set_status
 
-    assignment_fee = deal.assignment_fee or 15000
-    contract_price = deal.offer_sent_price or 0
-    total_due = contract_price + assignment_fee
 
-    template_data = {
-        "date": datetime.utcnow().strftime("%Y-%m-%d"),
-        "buyer_name": buyer.name,
-        "property_address": deal.title,
-        "contract_price": contract_price,
-        "assignment_fee": assignment_fee,
-        "total_due": total_due,
-        "closing_date": "TBD"
-    }
+async def assign_deal(db: AsyncSession, deal: Deal, buyer_id: int):
+    deal.assigned_buyer_id = buyer_id
+    await db.commit()
 
-    return template_data
+    await set_status(db, deal, "ASSIGNED")
+
+    return {"assigned": True}

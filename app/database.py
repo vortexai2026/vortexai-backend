@@ -1,69 +1,30 @@
 import os
-from typing import AsyncGenerator
-
 from sqlalchemy.ext.asyncio import (
     create_async_engine,
     AsyncSession,
-    async_sessionmaker,
+    async_sessionmaker
 )
 from sqlalchemy.orm import declarative_base
 
-# ==============================
-# DATABASE URL
-# ==============================
-
 DATABASE_URL = os.getenv("DATABASE_URL")
-
-if not DATABASE_URL:
-    raise RuntimeError("DATABASE_URL is missing. Set it in Railway Variables.")
-
-# Auto-fix if sync URL accidentally used
-if DATABASE_URL.startswith("postgres://"):
-    DATABASE_URL = DATABASE_URL.replace(
-        "postgres://",
-        "postgresql+asyncpg://",
-        1,
-    )
-
-if DATABASE_URL.startswith("postgresql://"):
-    DATABASE_URL = DATABASE_URL.replace(
-        "postgresql://",
-        "postgresql+asyncpg://",
-        1,
-    )
-
-print(f"USING DATABASE URL: '{DATABASE_URL}'")
-
-# ==============================
-# ENGINE
-# ==============================
 
 engine = create_async_engine(
     DATABASE_URL,
-    pool_pre_ping=True,
-    echo=False,  # change to True only for debugging
+    echo=False,
+    future=True
 )
 
-# ==============================
-# SESSION MAKER
-# ==============================
-
-async_session_maker = async_sessionmaker(
-    bind=engine,
-    class_=AsyncSession,
+# This is what your worker needs
+async_session = async_sessionmaker(
+    engine,
     expire_on_commit=False,
+    class_=AsyncSession
 )
-
-# ==============================
-# BASE MODEL
-# ==============================
 
 Base = declarative_base()
 
-# ==============================
-# DEPENDENCY (FastAPI)
-# ==============================
 
-async def get_db() -> AsyncGenerator[AsyncSession, None]:
-    async with async_session_maker() as session:
+# Dependency for FastAPI routes
+async def get_db():
+    async with async_session() as session:
         yield session

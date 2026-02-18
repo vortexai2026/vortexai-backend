@@ -1,26 +1,26 @@
-from typing import List
 from sqlalchemy.ext.asyncio import AsyncSession
-
-# Temporary placeholder logic until we build real AI matching
-
-async def match_buyers_for_deal(db: AsyncSession, deal) -> List[dict]:
-    """
-    Returns list of matched buyers.
-    For now: returns empty list (safe startup).
-    """
-    return []
+from sqlalchemy import select
+from app.models.buyer import Buyer
+from app.models.deal import Deal
+from app.services.lifecycle_control import set_status
+from app.services.brevo_client import brevo_post
 
 
-def build_buyer_email(deal, buyer) -> str:
-    """
-    Builds simple buyer email body.
-    """
-    return f"""
-New Deal Available!
+async def blast_buyers(db: AsyncSession, deal: Deal):
+    stmt = select(Buyer).where(Buyer.state == deal.state)
+    buyers = (await db.execute(stmt)).scalars().all()
 
-Title: {deal.title}
-Location: {deal.location}
-Price: {deal.price}
+    message = f"New Deal: {deal.address} | ARV: {deal.arv} | Asking: {deal.offer_price}"
 
-Visit platform to review.
-"""
+    for buyer in buyers:
+        if buyer.email:
+            await brevo_post("/smtp/email", {
+                "to": [{"email": buyer.email}],
+                "sender": {"name": "Vortex AI", "email": "no-reply@yourdomain.com"},
+                "subject": "New Investment Opportunity",
+                "htmlContent": f"<p>{message}</p>"
+            })
+
+    await set_status(db, deal, "BLASTED")
+
+    return {"buyers_notified": len(buyers)}

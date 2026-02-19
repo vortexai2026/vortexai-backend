@@ -1,0 +1,37 @@
+<!doctype html>
+<html>
+<head><meta charset="utf-8"><title>Lead Intake</title></head>
+<body>
+<h2>Buyer Lead</h2>
+
+<form id="f">
+  <input id="lead_name" placeholder="Name"><br><br>
+  <input id="phone" placeholder="Phone (+1204...)"><br><br>
+  <input id="email" placeholder="Email"><br><br>
+  <input id="source" placeholder="Source (facebook/kijiji)" value="facebook"><br><br>
+  <textarea id="message" placeholder="Message"></textarea><br><br>
+  <button>Submit</button>
+</form>
+
+<script>
+const API = "https://YOUR-BACKEND-URL"; // change
+
+document.getElementById("f").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const payload = {
+    lead_name: document.getElementById("lead_name").value || null,
+    phone: document.getElementById("phone").value || null,
+    email: document.getElementById("email").value || null,
+    source: document.getElementById("source").value || "facebook",
+    message: document.getElementById("message").value || null
+  };
+  await fetch(API + "/cars/leads", {
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify(payload)
+  });
+  alert("Lead saved!");
+});
+</script>
+</body>
+</html>

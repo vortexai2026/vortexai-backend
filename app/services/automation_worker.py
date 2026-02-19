@@ -1,5 +1,5 @@
 import asyncio
-from app.database import async_session
+from app.database import AsyncSessionLocal
 from app.ai.ai_level7_orchestrator import process_once
 
 
@@ -8,7 +8,7 @@ async def run_once():
 
     while True:
         try:
-            async with async_session() as db:
+            async with AsyncSessionLocal() as db:
                 print("🔄 Running Level 7 cycle")
                 await process_once(db)
                 print("✅ Level 7 cycle complete")

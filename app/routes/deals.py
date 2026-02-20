@@ -1,7 +1,8 @@
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-from app.db import get_db
+
+from app.database import get_db   # ✅ correct import
 from app.models.deal import Deal
 
 router = APIRouter(prefix="/deals", tags=["Deals"])
@@ -26,9 +27,11 @@ async def list_deals(db: AsyncSession = Depends(get_db)):
             "seller_price": d.seller_price,
             "arv_estimated": d.arv_estimated,
             "repair_estimate": d.repair_estimate,
+            "mao": d.mao,
             "spread": d.spread,
+            "confidence_score": d.confidence_score,
             "profit_flag": d.profit_flag,
-            "market_tag": d.market_tag
+            "market_tag": d.market_tag,
         }
         for d in deals
     ]

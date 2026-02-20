@@ -1,12 +1,20 @@
-# app/main.py
-
 import os
 import asyncio
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.database import engine, Base
-from app.services.automation_worker import run_once  # ✅ FIXED IMPORT
+from app.services.automation_worker import run_once
+
+# 🔥 VERY IMPORTANT: IMPORT MODELS SO SQLALCHEMY REGISTERS THEM
+from app.models.deal import Deal
+from app.models.buyer import Buyer
+from app.models.car import Car
+from app.models.followup import FollowUp
+from app.models.seller_call import SellerCall
+from app.models.buyer_interest import BuyerInterest
+from app.models.buyer_outreach_log import BuyerOutreachLog
+from app.models.ai_decision_log import AIDecisionLog
 
 # ROUTES
 from app.routes import (
@@ -31,7 +39,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Core Routes
+# Register Routes
 app.include_router(ingest.router)
 app.include_router(deals.router)
 app.include_router(buyers.router)
@@ -46,6 +54,7 @@ app.include_router(autonomous.router)
 async def startup_event():
     print("USING DATABASE URL:", os.getenv("DATABASE_URL"))
 
+    # 🔥 CREATE ALL TABLES
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
 
@@ -55,7 +64,7 @@ async def startup_event():
 
     if auto_run:
         print("🤖 Autonomous mode starting...")
-        asyncio.create_task(run_once())  # ✅ NON-BLOCKING
+        asyncio.create_task(run_once())  # NON-BLOCKING
         print("🤖 Autonomous worker started")
 
 

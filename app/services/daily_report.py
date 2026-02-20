@@ -1,57 +1,29 @@
-# app/services/daily_report.py
+import os
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.deal import Deal
+from app.services.mailer import send_email
 
-from datetime import date
-from app.database import fetch_one
-from app.ai.ai_command_center import ask_ai
-from app.services.emailer import send_email
+REPORT_EMAIL = os.getenv("REPORT_EMAIL")
 
+async def send_daily_green_report(db: AsyncSession) -> int:
+    if not REPORT_EMAIL:
+        return 0
 
-def send_daily_report():
-    """
-    Generates a daily business summary using AI and emails it.
-    This should be triggered by a worker or cron job.
-    """
+    res = await db.execute(select(Deal).where(Deal.profit_flag == "green"))
+    greens = list(res.scalars().all())
 
-    # Fetch key stats for today
-    stats = fetch_one("""
-        SELECT
-            COUNT(*) AS deals_today,
-            COUNT(*) FILTER (WHERE decision = 'contact_seller') AS contacted,
-            COUNT(*) FILTER (WHERE ai_score > 80) AS hot_deals
-        FROM deals
-        WHERE created_at::date = CURRENT_DATE;
-    """)
+    if not greens:
+        return 0
 
-    # Fallback if DB returns None
-    if not stats:
-        stats = {
-            "deals_today": 0,
-            "contacted": 0,
-            "hot_deals": 0
-        }
+    lines = []
+    for d in greens[:25]:
+        lines.append(
+            f"{d.address} | ${d.seller_price:,.0f} | ARV ${d.arv_estimated:,.0f} | Spread ${d.spread:,.0f} | {d.market_tag}"
+        )
 
-    # Ask AI to generate a narrative summary
-    summary = ask_ai(f"""
-    Create a concise, professional daily business summary for VortexAI.
+    subject = f"🔥 Green Deals Report ({len(greens)} total)"
+    body = "Top Green Deals:\n\n" + "\n".join(lines)
 
-    Stats for {date.today().isoformat()}:
-    - Deals found: {stats['deals_today']}
-    - Contacted sellers: {stats['contacted']}
-    - Hot deals (AI score > 80): {stats['hot_deals']}
-
-    Include:
-    - Best performing cities
-    - What worked today
-    - What failed or underperformed
-    - A short recommendation for tomorrow
-    """)
-
-    # Send the report
-    send_email(
-        to="you@yourcompany.com",
-        subject="📊 VortexAI Daily Report",
-        body=summary
-    )
-
-    return {"status": "sent", "stats": stats}
-
+    send_email(REPORT_EMAIL, subject, body)
+    return len(greens)

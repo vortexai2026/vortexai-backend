@@ -8,7 +8,6 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     raise ValueError("DATABASE_URL env var is missing")
 
-# Create async engine
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,
@@ -16,18 +15,14 @@ engine = create_async_engine(
     pool_pre_ping=True,
 )
 
-# Session factory
 AsyncSessionLocal = sessionmaker(
     bind=engine,
     class_=AsyncSession,
     expire_on_commit=False,
 )
 
-# Base for models
 Base = declarative_base()
 
-
-# FastAPI dependency
 async def get_db() -> AsyncGenerator[AsyncSession, None]:
     async with AsyncSessionLocal() as session:
         yield session

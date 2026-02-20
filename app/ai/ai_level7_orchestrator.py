@@ -1,46 +1,27 @@
+from __future__ import annotations
+
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
 
-from app.models.deal import Deal
-from app.services.comps_engine import enrich_deal_with_arv
-from app.services.offer_engine import generate_offer
-from app.services.buyer_blast_engine import blast_buyers
-from app.services.seller_sms_brevo import kickoff_sms
-from app.services.lifecycle_control import set_status
+from app.ai.ai_level2_scoring import score_pending_deals
+from app.ai.ai_daily_report import send_daily_green_report
 
+async def run_level7_cycle(db: AsyncSession) -> dict:
+    """
+    Level 7 cycle:
+    1) score pending deals (adds ARV/flag)
+    2) send green daily report (last 24h)
+    """
+    scored = await score_pending_deals(db, limit=50)
+    sent = await send_daily_green_report(db)
 
-async def process_once(db: AsyncSession):
-    # 1️⃣ NEW deals → ARV → SCORED
-    new_deals = (await db.execute(
-        select(Deal).where(Deal.status == "NEW")
-    )).scalars().all()
+    greens = [d for d in scored if d.profit_flag == "green"]
+    oranges = [d for d in scored if d.profit_flag == "orange"]
+    reds = [d for d in scored if d.profit_flag == "red"]
 
-    for deal in new_deals:
-        await enrich_deal_with_arv(deal)
-        await set_status(db, deal, "SCORED")
-
-    # 2️⃣ SCORED → CONTACT SELLER
-    scored = (await db.execute(
-        select(Deal).where(Deal.status == "SCORED")
-    )).scalars().all()
-
-    for deal in scored:
-        await kickoff_sms(db, deal)
-
-    # 3️⃣ NEGOTIATING → GENERATE OFFER
-    negotiating = (await db.execute(
-        select(Deal).where(Deal.status == "NEGOTIATING")
-    )).scalars().all()
-
-    for deal in negotiating:
-        await generate_offer(db, deal)
-
-    # 4️⃣ UNDER CONTRACT → BLAST BUYERS
-    under_contract = (await db.execute(
-        select(Deal).where(Deal.status == "UNDER_CONTRACT")
-    )).scalars().all()
-
-    for deal in under_contract:
-        await blast_buyers(db, deal)
-
-    return {"cycle": "complete"}
+    return {
+        "scored_total": len(scored),
+        "scored_green": len(greens),
+        "scored_orange": len(oranges),
+        "scored_red": len(reds),
+        "daily_email_sent_count": sent,
+    }

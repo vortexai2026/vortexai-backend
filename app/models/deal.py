@@ -1,46 +1,40 @@
-from sqlalchemy import Column, Integer, String, Float, DateTime, ForeignKey
-from sqlalchemy.sql import func
-from app.database import Base
+from __future__ import annotations
 
+from sqlalchemy import Column, Integer, String, Float, DateTime, Text
+from sqlalchemy.sql import func
+from app.db import Base  # adjust import to your Base
 
 class Deal(Base):
     __tablename__ = "deals"
 
     id = Column(Integer, primary_key=True, index=True)
 
-    # 🔒 Prevent duplicates
-    external_id = Column(String, unique=True, index=True, nullable=False)
+    # ---- Existing core fields (keep yours; add if missing) ----
+    address = Column(String, nullable=True)
+    city = Column(String, nullable=True)
+    state = Column(String, nullable=True)
+    zip_code = Column(String, nullable=True)
 
-    title = Column(String, nullable=False)
-    asset_type = Column(String, nullable=False)
-    city = Column(String, nullable=False)
+    beds = Column(Integer, nullable=True)
+    baths = Column(Float, nullable=True)
+    sqft = Column(Integer, nullable=True)
+    year_built = Column(Integer, nullable=True)
 
-    price = Column(Float, nullable=False)
+    seller_price = Column(Float, nullable=True)   # asking price
+    notes = Column(Text, nullable=True)           # distress keywords, etc.
 
-    # Existing scoring field
-    score = Column(Float, default=0.0)
-
-    # Lifecycle engine
-    status = Column(
-        String,
-        default="new"
-    )  # new, ai_processed, matched, contacted, under_contract, closed, dead
-
-    # AI decision + matching
-    ai_decision = Column(
-        String,
-        default="pending"
-    )  # pending, ignore, review, match_buyer, contact_seller
-
-    matched_buyer_id = Column(Integer, ForeignKey("buyers.id"), nullable=True)
-    ai_processed_at = Column(DateTime(timezone=True), nullable=True)
-
-    # Profit visibility
-    arv = Column(Float, nullable=True)
-    repairs = Column(Float, nullable=True)
-    expected_profit = Column(Float, nullable=True)
-    assignment_fee = Column(Float, nullable=True)
-    actual_profit = Column(Float, nullable=True)
+    status = Column(String, nullable=True, default="Lead")
 
     created_at = Column(DateTime(timezone=True), server_default=func.now())
-    updated_at = Column(DateTime(timezone=True), nullable=True)
+    updated_at = Column(DateTime(timezone=True), onupdate=func.now(), server_default=func.now())
+
+    # ---- NEW valuation fields ----
+    market_tag = Column(String, nullable=True)          # TX_DFW / GA_ATL
+    arv_estimated = Column(Float, nullable=True)
+    repair_estimate = Column(Float, nullable=True)
+    mao = Column(Float, nullable=True)
+    spread = Column(Float, nullable=True)
+    confidence_score = Column(Integer, nullable=True)
+    profit_flag = Column(String, nullable=True)         # green/orange/red
+
+    comps_raw = Column(Text, nullable=True)             # optional: store raw JSON as string

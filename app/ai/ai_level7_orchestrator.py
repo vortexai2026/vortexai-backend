@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.ai.ai_level2_scoring import score_pending_deals
 from app.ai.ai_daily_report import send_daily_green_report
 
+
 async def run_level7_cycle(db: AsyncSession) -> dict:
     """
     Level 7 cycle:
@@ -25,3 +26,18 @@ async def run_level7_cycle(db: AsyncSession) -> dict:
         "scored_red": len(reds),
         "daily_email_sent_count": sent,
     }
+
+
+# ✅ ADD THIS WRAPPER (THIS FIXES YOUR ERROR)
+async def process_once(db: AsyncSession):
+    """
+    Compatibility wrapper used by automation_worker.
+    """
+    print("🔄 Running Level 7 cycle")
+
+    result = await run_level7_cycle(db)
+
+    print("✅ Level 7 cycle complete")
+    print("📊 Result:", result)
+
+    return result

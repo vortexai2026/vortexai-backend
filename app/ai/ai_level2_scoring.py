@@ -1,59 +1,120 @@
-from typing import Dict, Any
+from __future__ import annotations
 
-def score_deal(deal: Dict[str, Any]) -> Dict[str, float]:
-    price = float(deal.get("price") or 0)
-    title = (deal.get("title") or "").lower()
-    location = (deal.get("location") or "").lower()
-    asset_type = (deal.get("asset_type") or "").lower()
+import json
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
-    profit = 0
-    urgency = 0
-    risk = 0
+from app.config.settings import settings
+from app.models.deal import Deal
 
-    # Profit heuristics
-    if asset_type == "real_estate":
-        if 30000 <= price <= 200000:
-            profit += 70
-        elif price > 200000:
-            profit += 45
+from app.services.valuation.market import market_tag
+from app.services.valuation.comps_provider import get_comps, CompsError
+from app.services.valuation.repair_estimator import estimate_repairs
+from app.services.valuation.arv_engine import calculate_arv, calculate_mao, calculate_spread
+from app.services.valuation.confidence_score import calculate_confidence
+
+async def score_and_enrich_deal(db: AsyncSession, deal: Deal) -> Deal:
+    """
+    Enrich deal with:
+    market_tag, arv_estimated, repairs, mao, spread, confidence_score, profit_flag
+    """
+    # 1) Market tag
+    tag = market_tag(deal.city, deal.state)
+    deal.market_tag = tag
+
+    # If not in our 2 markets, mark as red & return (keeps system focused)
+    if tag is None or tag not in settings.MARKETS:
+        deal.profit_flag = "red"
+        await db.commit()
+        await db.refresh(deal)
+        return deal
+
+    # 2) Repairs (V1 heuristic)
+    repairs = estimate_repairs(
+        year_built=deal.year_built,
+        sqft=deal.sqft,
+        distress_keywords=deal.notes,
+    )
+
+    # 3) Comps / ARV
+    comps_payload = {}
+    arv = None
+    comps_count = 0
+    try:
+        comps_payload = await get_comps(
+            address=deal.address,
+            city=deal.city or "",
+            state=deal.state or "",
+            zip_code=deal.zip_code,
+            beds=deal.beds,
+            baths=deal.baths,
+            sqft=deal.sqft,
+        )
+        comps_count = int(comps_payload.get("comps_count") or 0)
+        arv = calculate_arv(comps_payload)
+    except CompsError:
+        # If comps provider fails, we can't trust valuation
+        arv = None
+
+    # 4) Confidence
+    conf = calculate_confidence(
+        comps_count=comps_count,
+        has_address=bool(deal.address),
+        has_sqft=bool(deal.sqft),
+        has_beds_baths=bool(deal.beds) and bool(deal.baths),
+    )
+
+    # 5) Spread + Flag
+    seller_price = float(deal.seller_price or 0)
+    flag = "red"
+    mao = None
+    spread = None
+
+    if arv is not None and seller_price > 0:
+        mao = calculate_mao(arv, repairs)
+        spread = calculate_spread(arv, repairs, seller_price)
+
+        if spread >= settings.GREEN_MIN_SPREAD and conf >= settings.MIN_CONFIDENCE_GREEN:
+            flag = "green"
+        elif spread >= settings.ORANGE_MIN_SPREAD:
+            flag = "orange"
         else:
-            profit += 25
+            flag = "red"
+    else:
+        # Missing price or ARV -> red until data is fixed
+        flag = "red"
 
-    if asset_type in ("cars", "car", "vehicle"):
-        if 1000 <= price <= 5000:
-            profit += 70
-        elif price <= 1000:
-            risk += 25
-        else:
-            profit += 40
+    # 6) Save
+    deal.arv_estimated = float(arv) if arv is not None else None
+    deal.repair_estimate = float(repairs)
+    deal.mao = float(mao) if mao is not None else None
+    deal.spread = float(spread) if spread is not None else None
+    deal.confidence_score = int(conf)
+    deal.profit_flag = flag
 
-    if asset_type in ("business", "businesses"):
-        if 20000 <= price <= 250000:
-            profit += 65
-        else:
-            profit += 35
+    # Store raw comps JSON if you want
+    if comps_payload:
+        try:
+            deal.comps_raw = json.dumps(comps_payload.get("raw", comps_payload))[:20000]
+        except Exception:
+            deal.comps_raw = None
 
-    # Urgency keywords
-    urgent_words = ["must sell", "urgent", "asap", "today", "need gone", "moving", "divorce", "foreclosure", "cash only"]
-    urgency += 70 if any(w in title for w in urgent_words) else 30
+    await db.commit()
+    await db.refresh(deal)
+    return deal
 
-    # Risk keywords
-    risky_words = ["no title", "salvage", "rebuilt", "as-is", "scam", "no paperwork", "parts only"]
-    risk += 70 if any(w in title for w in risky_words) else 20
+async def score_pending_deals(db: AsyncSession, limit: int = 50) -> list[Deal]:
+    """
+    Find deals in our target markets that are not yet flagged and score them.
+    """
+    q = select(Deal).where(
+        (Deal.profit_flag == None)  # noqa: E711
+    ).order_by(Deal.created_at.desc()).limit(limit)
 
-    # Location boost
-    hot_locations = ["winnipeg", "toronto", "vancouver", "calgary", "edmonton", "miami", "orlando", "houston", "dallas"]
-    if any(city in location for city in hot_locations):
-        profit += 10
+    res = await db.execute(q)
+    deals = list(res.scalars().all())
 
-    profit = max(0, min(100, profit))
-    urgency = max(0, min(100, urgency))
-    risk = max(0, min(100, risk))
-    ai_score = max(0, min(100, (profit * 0.5) + (urgency * 0.3) - (risk * 0.2)))
-
-    return {
-        "profit_score": round(profit, 2),
-        "urgency_score": round(urgency, 2),
-        "risk_score": round(risk, 2),
-        "ai_score": round(ai_score, 2),
-    }
+    out: list[Deal] = []
+    for d in deals:
+        out.append(await score_and_enrich_deal(db, d))
+    return out

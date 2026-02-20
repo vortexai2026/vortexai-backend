@@ -2,7 +2,7 @@ import os
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.deal import Deal
-from app.services.mailer import send_email
+from app.services.emailer import send_email   # ✅ correct import
 
 REPORT_EMAIL = os.getenv("REPORT_EMAIL")
 

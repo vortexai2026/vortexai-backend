@@ -9,7 +9,7 @@ EMAIL_PASS = os.getenv("EMAIL_PASS")
 
 def send_email(to: str, subject: str, body: str) -> None:
     if not EMAIL_USER or not EMAIL_PASS:
-        raise ValueError("EMAIL_USER / EMAIL_PASS env vars missing")
+        raise ValueError("EMAIL_USER / EMAIL_PASS missing")
 
     msg = MIMEText(body)
     msg["Subject"] = subject

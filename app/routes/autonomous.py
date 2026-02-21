@@ -1,54 +1,37 @@
-from fastapi import APIRouter, Depends, HTTPException
+# app/routes/autonomous.py
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
+from sqlalchemy import select
 
 from app.database import get_db
 from app.models.deal import Deal
-from app.services.scoring import score_deal
 from app.services.daily_report import send_daily_green_report
-from app.services.deal_blast import blast_deal_to_buyers
+from app.services.rentcast_ingest import pull_all_markets
 
 router = APIRouter(prefix="/autonomous", tags=["Autonomous"])
 
+
 @router.post("/run")
-async def autonomous_run(db: AsyncSession = Depends(get_db)):
-    # Score pending deals
-    res = await db.execute(
-        select(Deal).where(or_(Deal.profit_flag == None, Deal.profit_flag == "")).limit(100)
-    )
-    pending = list(res.scalars().all())
+async def run_autonomous(db: AsyncSession = Depends(get_db)):
+    # 1) Pull deals from RentCast + score
+    pull_result = await pull_all_markets(db, total_target=50)
 
-    scored_green = scored_orange = scored_red = 0
+    # 2) Count flags
+    res = await db.execute(select(Deal.profit_flag))
+    flags = [x[0] for x in res.all() if x[0]]
+    scored_total = len(flags)
+    scored_green = sum(1 for f in flags if f == "green")
+    scored_orange = sum(1 for f in flags if f == "orange")
+    scored_red = sum(1 for f in flags if f == "red")
 
-    for d in pending:
-        d = score_deal(d)
-        if d.profit_flag == "green":
-            scored_green += 1
-        elif d.profit_flag == "orange":
-            scored_orange += 1
-        else:
-            scored_red += 1
-
-    await db.commit()
-
-    # Send report
-    sent_count = await send_daily_green_report(db)
+    # 3) Email report (greens)
+    daily_email_sent_count = await send_daily_green_report(db)
 
     return {
-        "scored_total": len(pending),
+        "pull": pull_result,
+        "scored_total": scored_total,
         "scored_green": scored_green,
         "scored_orange": scored_orange,
         "scored_red": scored_red,
-        "daily_email_sent_count": sent_count,
+        "daily_email_sent_count": daily_email_sent_count,
     }
-
-@router.post("/blast/{deal_id}")
-async def blast_one(deal_id: int, db: AsyncSession = Depends(get_db)):
-    res = await db.execute(select(Deal).where(Deal.id == deal_id))
-    deal = res.scalar_one_or_none()
-    if not deal:
-        raise HTTPException(status_code=404, detail="Deal not found")
-    if deal.profit_flag != "green":
-        raise HTTPException(status_code=400, detail="Only green deals can be blasted")
-    result = await blast_deal_to_buyers(db, deal)
-    return {"message": "Blast complete", "result": result}

@@ -1,49 +1,33 @@
-  # app/services/scoring.py
-
 from app.models.deal import Deal
 
 
 def score_deal(deal: Deal) -> Deal:
     """
-    Basic scoring engine (Level 2 foundation)
-    Calculates:
-    - MAO
-    - Spread
-    - Profit flag (green/orange/red)
-    - Confidence score
+    Simple 70% rule scoring engine
     """
 
-    # Safety defaults
-    arv = deal.arv_estimated or 0
-    repairs = deal.repair_estimate or 0
-    seller_price = deal.seller_price or 0
+    if not deal.arv_estimated or not deal.repair_estimate:
+        deal.profit_flag = "red"
+        deal.confidence_score = 0
+        return deal
 
-    # MAO formula (70% rule)
-    mao = (arv * 0.7) - repairs
-    deal.mao = round(mao, 2)
+    # 70% Rule
+    mao = (deal.arv_estimated * 0.70) - deal.repair_estimate
+    deal.mao = mao
 
-    # Spread
-    spread = mao - seller_price
-    deal.spread = round(spread, 2)
-
-    # Profit flag logic
-    if spread > 20000:
+    if deal.seller_price and deal.seller_price <= mao:
         deal.profit_flag = "green"
-    elif spread > 5000:
+        deal.confidence_score = 85
+    elif deal.seller_price and deal.seller_price <= mao * 1.1:
         deal.profit_flag = "orange"
+        deal.confidence_score = 60
     else:
         deal.profit_flag = "red"
+        deal.confidence_score = 30
 
-    # Confidence scoring
-    confidence = 50
-
-    if deal.profit_flag == "green":
-        confidence += 30
-    if arv > 0:
-        confidence += 10
-    if repairs < 50000:
-        confidence += 10
-
-    deal.confidence_score = min(confidence, 100)
+    deal.spread = (
+        deal.arv_estimated - deal.seller_price - deal.repair_estimate
+        if deal.seller_price else 0
+    )
 
     return deal

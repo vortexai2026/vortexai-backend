@@ -1,33 +1,50 @@
-from app.models.deal import Deal
+from typing import Tuple
 
 
-def score_deal(deal: Deal) -> Deal:
+def estimate_repairs(property_data: dict) -> float:
     """
-    Simple 70% rule scoring engine
+    Very simple repair estimator.
+    You can upgrade this later with ML or comps logic.
     """
 
-    if not deal.arv_estimated or not deal.repair_estimate:
-        deal.profit_flag = "red"
-        deal.confidence_score = 0
-        return deal
+    year_built = property_data.get("year_built")
+    square_feet = property_data.get("square_feet", 0)
 
-    # 70% Rule
-    mao = (deal.arv_estimated * 0.70) - deal.repair_estimate
-    deal.mao = mao
+    if not year_built:
+        return 25000
 
-    if deal.seller_price and deal.seller_price <= mao:
-        deal.profit_flag = "green"
-        deal.confidence_score = 85
-    elif deal.seller_price and deal.seller_price <= mao * 1.1:
-        deal.profit_flag = "orange"
-        deal.confidence_score = 60
+    age = 2026 - year_built
+
+    # Basic logic
+    if age < 20:
+        return square_feet * 5
+    elif age < 50:
+        return square_feet * 12
     else:
-        deal.profit_flag = "red"
-        deal.confidence_score = 30
+        return square_feet * 20
 
-    deal.spread = (
-        deal.arv_estimated - deal.seller_price - deal.repair_estimate
-        if deal.seller_price else 0
-    )
 
-    return deal
+def compute_score(
+    seller_price: float,
+    arv: float,
+    repairs: float
+) -> Tuple[str, float, float]:
+    """
+    Returns:
+    - profit_flag (green/orange/red)
+    - spread
+    - mao (max allowable offer)
+    """
+
+    if not seller_price or not arv:
+        return "red", 0, 0
+
+    mao = (arv * 0.7) - repairs
+    spread = mao - seller_price
+
+    if spread >= 20000:
+        return "green", spread, mao
+    elif spread >= 5000:
+        return "orange", spread, mao
+    else:
+        return "red", spread, mao

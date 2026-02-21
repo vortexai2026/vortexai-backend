@@ -5,33 +5,36 @@ from sqlalchemy import select
 
 from app.database import get_db
 from app.models.deal import Deal
-from app.services.daily_report import send_daily_green_report
-from app.services.rentcast_ingest import pull_all_markets
+from app.services.rentcast_ingest import pull_deals
+from app.services.daily_report import send_green_report
+from app.services.buyer_blast import blast_green_deals
 
-router = APIRouter(prefix="/autonomous", tags=["Autonomous"])
+router = APIRouter(prefix="/autonomous", tags=["autonomous"])
 
 
 @router.post("/run")
-async def run_autonomous(db: AsyncSession = Depends(get_db)):
-    # 1) Pull deals from RentCast + score
-    pull_result = await pull_all_markets(db, total_target=50)
+async def run_system(db: AsyncSession = Depends(get_db)):
+    """
+    Runs the full 'Level 7' cycle:
+    1) Pull deals from RentCast into DB
+    2) Send green deals report to your personal email
+    3) Blast each green deal to matching buyers
+    """
+    pulled = await pull_deals(db)
 
-    # 2) Count flags
-    res = await db.execute(select(Deal.profit_flag))
-    flags = [x[0] for x in res.all() if x[0]]
-    scored_total = len(flags)
-    scored_green = sum(1 for f in flags if f == "green")
-    scored_orange = sum(1 for f in flags if f == "orange")
-    scored_red = sum(1 for f in flags if f == "red")
+    # pull greens after ingest
+    res = await db.execute(select(Deal).where(Deal.profit_flag == "green"))
+    greens = list(res.scalars().all())
 
-    # 3) Email report (greens)
-    daily_email_sent_count = await send_daily_green_report(db)
+    blasted_total = 0
+    for deal in greens:
+        blasted_total += await blast_green_deals(db, deal)
+
+    green_report_sent = await send_green_report(db)
 
     return {
-        "pull": pull_result,
-        "scored_total": scored_total,
-        "scored_green": scored_green,
-        "scored_orange": scored_orange,
-        "scored_red": scored_red,
-        "daily_email_sent_count": daily_email_sent_count,
+        "pulled": pulled,
+        "greens_found": len(greens),
+        "buyer_emails_sent": blasted_total,
+        "green_report_sent": green_report_sent,
     }

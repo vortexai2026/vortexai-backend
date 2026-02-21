@@ -2,11 +2,6 @@ from typing import Tuple
 
 
 def estimate_repairs(property_data: dict) -> float:
-    """
-    Very simple repair estimator.
-    You can upgrade this later with ML or comps logic.
-    """
-
     year_built = property_data.get("year_built")
     square_feet = property_data.get("square_feet", 0)
 
@@ -15,7 +10,6 @@ def estimate_repairs(property_data: dict) -> float:
 
     age = 2026 - year_built
 
-    # Basic logic
     if age < 20:
         return square_feet * 5
     elif age < 50:
@@ -29,12 +23,6 @@ def compute_score(
     arv: float,
     repairs: float
 ) -> Tuple[str, float, float]:
-    """
-    Returns:
-    - profit_flag (green/orange/red)
-    - spread
-    - mao (max allowable offer)
-    """
 
     if not seller_price or not arv:
         return "red", 0, 0
@@ -48,3 +36,29 @@ def compute_score(
         return "orange", spread, mao
     else:
         return "red", spread, mao
+
+
+# ✅ THIS FIXES YOUR CRASH
+def score_deal(deal):
+    """
+    Used by deals.py
+    Mutates deal object directly
+    """
+
+    repairs = estimate_repairs({
+        "year_built": deal.year_built,
+        "square_feet": deal.square_feet
+    })
+
+    flag, spread, mao = compute_score(
+        seller_price=deal.seller_price,
+        arv=deal.arv_estimated,
+        repairs=repairs
+    )
+
+    deal.repair_estimate = repairs
+    deal.spread = spread
+    deal.mao = mao
+    deal.profit_flag = flag
+
+    return deal

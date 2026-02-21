@@ -1,13 +1,22 @@
-from pydantic import BaseModel
+# app/schemas/buyer_import.py
+from pydantic import BaseModel, EmailStr
 from typing import Optional
 
+
 class BuyerImport(BaseModel):
-    email: str
-    name: str
-    asset_type: str
-    city: str
-    max_budget: float
-    preferred_zip: Optional[str] = None
-    rehab_tolerance: Optional[str] = None  # light / medium / heavy
-    buy_box_notes: Optional[str] = None
+    name: Optional[str] = None
+    email: Optional[EmailStr] = None
     phone: Optional[str] = None
+
+    market_tag: str
+    min_price: Optional[float] = None
+    max_price: Optional[float] = None
+
+    buy_box_beds: Optional[int] = None
+    buy_box_baths: Optional[float] = None
+
+    proof_of_funds: Optional[str] = None
+    notes: Optional[str] = None
+
+    tier: Optional[str] = "free"
+    status: Optional[str] = "active"

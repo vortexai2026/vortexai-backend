@@ -1,24 +1,10 @@
-from sqlalchemy import select
-from app.models.buyer import Buyer
+# app/services/buyer_blast.py
+from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.deal import Deal
 
-
-async def blast_green_deals(db, deal):
+async def blast_green_deals(db: AsyncSession, deal: Deal) -> int:
     """
-    Finds matching buyers for a green deal
-    and returns how many matches were found.
-    (No email sending yet — just matching logic)
+    TEMP: we are skipping buyer blasts for now.
+    Later we connect buyer_matcher + email/sms.
     """
-
-    # Match by city (simple version)
-    result = await db.execute(
-        select(Buyer).where(Buyer.city == deal.city)
-    )
-    buyers = result.scalars().all()
-
-    count = 0
-
-    for buyer in buyers:
-        # You can later add email/sms logic here
-        count += 1
-
-    return count
+    return 0

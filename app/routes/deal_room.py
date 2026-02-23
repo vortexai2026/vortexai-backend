@@ -1,37 +1,40 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from datetime import datetime, timezone
 
-from app.database import get_db
+from app.db import get_session
+from app.models.deal_room import DealRoomToken
 from app.models.deal import Deal
 
-router = APIRouter()
+router = APIRouter(prefix="/deal-room", tags=["Deal Room"])
 
-@router.get("/deal-room/{token}")
-async def get_deal_room(token: str, db: AsyncSession = Depends(get_db)):
+@router.get("/{token}")
+async def get_deal_room(token: str, session: AsyncSession = Depends(get_session)):
+    res = await session.execute(select(DealRoomToken).where(DealRoomToken.token == token).limit(1))
+    t = res.scalar_one_or_none()
+    if not t:
+        raise HTTPException(status_code=404, detail="Invalid token")
 
-    result = await db.execute(
-        select(Deal).where(
-            Deal.deal_room_token == token,
-            Deal.deal_room_enabled == True
-        )
-    )
+    # expiry check
+    if datetime.now(timezone.utc) > t.expires_at:
+        raise HTTPException(status_code=410, detail="Token expired")
 
-    deal = result.scalar_one_or_none()
-
+    dres = await session.execute(select(Deal).where(Deal.id == t.deal_id).limit(1))
+    deal = dres.scalar_one_or_none()
     if not deal:
         raise HTTPException(status_code=404, detail="Deal not found")
 
     return {
         "deal_id": deal.id,
-        "title": deal.title,
+        "property_address": deal.property_address,
         "city": deal.city,
-        "price": deal.price,
-        "arv": deal.arv,
-        "repairs": deal.repairs,
-        "mao": deal.mao,
-        "assignment_fee": deal.assignment_fee,
+        "state": deal.state,
+        "zip": deal.zip,
+        "arv": float(deal.arv) if deal.arv is not None else None,
+        "repairs": float(deal.repairs) if deal.repairs is not None else None,
+        "offer_price": float(deal.offer_price) if deal.offer_price is not None else None,
+        "estimated_spread": float(deal.estimated_spread) if deal.estimated_spread is not None else None,
         "status": deal.status,
-        "stripe_payment_status": deal.stripe_payment_status,
-        "pay_link": f"/deals/{deal.id}/collect_assignment/{{buyer_id}}"
+        "notes": deal.notes,
     }
